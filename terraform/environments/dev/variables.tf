@@ -37,3 +37,8 @@ variable "owner_name" {
   description = "Name of the infrastructure owner."
   type        = string
 }
+
+variable "allowed_admin_cidr" {
+  description = "IPv4 CIDR allowed to access SSH and development ports."
+  type        = string
+}

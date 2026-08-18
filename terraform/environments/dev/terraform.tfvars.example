@@ -9,3 +9,4 @@ public_subnet_cidr   = "10.0.1.0/24"
 database_subnet_cidr = "10.0.10.0/24"
 redis_subnet_cidr    = "10.0.20.0/24"
 
+allowed_admin_cidr = "YOUR_PUBLIC_IP/32"
