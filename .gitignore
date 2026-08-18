@@ -1,0 +1,45 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+.terraform.lock.hcl
+
+# Secrets / variables
+*.tfvars
+*.tfvars.json
+.env
+.env.*
+!*.example
+
+# SSH / credentials
+*.pem
+*.key
+.aws/
+.ssh/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Ansible
+*.retry
+vault-password.txt
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Application
+staticfiles/
+media/
+logs/
