@@ -14,9 +14,10 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "status-page-platform"
-      Environment = "dev"
+      Project     = var.project_name
+      Environment = var.environment
       ManagedBy   = "terraform"
+      Owner       = var.owner_name
     }
   }
 }

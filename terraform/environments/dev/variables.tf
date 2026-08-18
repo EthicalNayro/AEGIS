@@ -1,11 +1,39 @@
 variable "aws_region" {
-  description = "AWS region for the dev environment."
+  description = "AWS region used for the environment."
   type        = string
-  default     = "il-central-1"
 }
 
 variable "project_name" {
-  description = "Project name used for resource naming."
+  description = "Project name."
   type        = string
-  default     = "status-page"
+}
+
+variable "environment" {
+  description = "Deployment environment."
+  type        = string
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC."
+  type        = string
+}
+
+variable "public_subnet_cidr" {
+  description = "Public application subnet."
+  type        = string
+}
+
+variable "database_subnet_cidr" {
+  description = "Private PostgreSQL subnet."
+  type        = string
+}
+
+variable "redis_subnet_cidr" {
+  description = "Private Redis subnet."
+  type        = string
+}
+
+variable "owner_name" {
+  description = "Name of the infrastructure owner."
+  type        = string
 }
