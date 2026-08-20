@@ -1,3 +1,26 @@
 ---
-# Main orchestration playbook.
-# Roles will be enabled as the infrastructure becomes available.
+- name: Configure application server
+  hosts: app
+  become: true
+
+  roles:
+    - common
+    - status_page
+    - gunicorn
+    - nginx
+
+- name: Configure PostgreSQL server
+  hosts: database
+  become: true
+
+  roles:
+    - common
+    - postgres
+
+- name: Configure Redis server
+  hosts: redis
+  become: true
+
+  roles:
+    - common
+    - redis

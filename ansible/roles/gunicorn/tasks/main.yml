@@ -1,0 +1,36 @@
+---
+- name: Copy Gunicorn configuration
+  ansible.builtin.copy:
+    src: /opt/status-page/contrib/gunicorn.py
+    dest: /opt/status-page/gunicorn.py
+    remote_src: true
+    owner: status-page
+    group: status-page
+    mode: "0644"
+
+- name: Install Status-Page systemd service files
+  ansible.builtin.copy:
+    src: "/opt/status-page/contrib/{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - status-page.service
+    - status-page-scheduler.service
+    - status-page-rq.service
+  notify:
+    - Reload systemd
+    - Restart Status-Page services
+
+- name: Enable and start Status-Page services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - status-page
+    - status-page-scheduler
+    - status-page-rq

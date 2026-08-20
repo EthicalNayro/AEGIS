@@ -1,0 +1,149 @@
+---
+- name: Install Status-Page system dependencies
+  ansible.builtin.apt:
+    name:
+      - git
+      - python3-pip
+      - python3-venv
+      - python3-dev
+      - build-essential
+      - libxml2-dev
+      - libxslt1-dev
+      - libffi-dev
+      - libpq-dev
+      - libssl-dev
+      - zlib1g-dev
+    state: present
+
+- name: Create Status-Page system group
+  ansible.builtin.group:
+    name: status-page
+    system: true
+
+- name: Create Status-Page system user
+  ansible.builtin.user:
+    name: status-page
+    group: status-page
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create Status-Page home directory for Ansible temporary files
+  ansible.builtin.file:
+    path: /home/status-page
+    state: directory
+    owner: status-page
+    group: status-page
+    mode: "0750"
+
+- name: Create Ansible temporary directory for Status-Page user
+  ansible.builtin.file:
+    path: /home/status-page/.ansible/tmp
+    state: directory
+    owner: status-page
+    group: status-page
+    mode: "0700"
+
+- name: Ensure Status-Page home directory exists
+  ansible.builtin.file:
+    path: /var/lib/status-page
+    state: directory
+    owner: status-page
+    group: status-page
+    mode: "0750"
+
+- name: Create Status-Page installation directory
+  ansible.builtin.file:
+    path: /opt/status-page
+    state: directory
+    owner: status-page
+    group: status-page
+    mode: "0755"
+
+- name: Clone Status-Page repository
+  ansible.builtin.git:
+    repo: https://github.com/status-page/status-page.git
+    dest: /opt/status-page
+    version: "{{ status_page_version }}"
+  become_user: status-page
+  register: status_page_repo
+
+- name: Create Status-Page configuration file
+  ansible.builtin.copy:
+    src: /opt/status-page/statuspage/statuspage/configuration_example.py
+    dest: /opt/status-page/statuspage/statuspage/configuration.py
+    remote_src: true
+    force: false
+    owner: status-page
+    group: status-page
+    mode: "0640"
+
+- name: Configure Status-Page
+  ansible.builtin.blockinfile:
+    path: /opt/status-page/statuspage/statuspage/configuration.py
+    marker: "# {mark} ANSIBLE MANAGED CONFIGURATION"
+    block: |
+      ALLOWED_HOSTS = {{ status_page_allowed_hosts | to_json }}
+
+      DATABASE = {
+          'NAME': {{ status_page_db_name | to_json }},
+          'USER': {{ status_page_db_user | to_json }},
+          'PASSWORD': {{ status_page_db_password | to_json }},
+          'HOST': {{ status_page_db_host | to_json }},
+          'PORT': {{ postgres_port | string | to_json }},
+          'CONN_MAX_AGE': 300,
+      }
+
+      REDIS = {
+          'tasks': {
+              'HOST': {{ status_page_redis_host | to_json }},
+              'PORT': {{ redis_port }},
+              'PASSWORD': '',
+              'DATABASE': 0,
+              'SSL': False,
+          },
+          'caching': {
+              'HOST': {{ status_page_redis_host | to_json }},
+              'PORT': {{ redis_port }},
+              'PASSWORD': '',
+              'DATABASE': 1,
+              'SSL': False,
+          }
+      }
+
+      SECRET_KEY = {{ status_page_secret_key | to_json }}
+  no_log: true
+
+- name: Pin compatible Status-Page Python dependencies
+  ansible.builtin.copy:
+    dest: /opt/status-page/local_requirements.txt
+    content: |
+      mkdocs-autorefs==1.0.1
+    owner: status-page
+    group: status-page
+    mode: "0644"
+  register: status_page_local_requirements
+
+- name: Check whether Status-Page virtual environment exists
+  ansible.builtin.stat:
+    path: /opt/status-page/venv/bin/python
+  register: status_page_venv
+
+- name: Run Status-Page installation and upgrade script
+  ansible.builtin.command:
+    cmd: /opt/status-page/upgrade.sh
+    chdir: /opt/status-page
+    become_user: status-page
+  environment:
+    PYTHON: /usr/bin/python3.10
+  when: >
+    status_page_repo.changed
+    or status_page_local_requirements.changed
+    or not status_page_venv.stat.exists
+
+- name: Set Status-Page ownership
+  ansible.builtin.file:
+    path: /opt/status-page
+    owner: status-page
+    group: status-page
+    recurse: true

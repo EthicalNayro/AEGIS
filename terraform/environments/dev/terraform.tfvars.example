@@ -10,3 +10,9 @@ database_subnet_cidr = "10.0.10.0/24"
 redis_subnet_cidr    = "10.0.20.0/24"
 
 allowed_admin_cidr = "YOUR_PUBLIC_IP/32"
+
+app_instance_type      = "t3.small"
+database_instance_type = "t3.small"
+redis_instance_type    = "t3.small"
+
+ssh_public_key_path = "~/.ssh/YOUR_PUBLIC_KEY.pub"

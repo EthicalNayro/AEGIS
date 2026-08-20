@@ -1,45 +1,40 @@
-variable "aws_region" {
-  description = "AWS region used for the environment."
-  type        = string
-}
-
 variable "project_name" {
-  description = "Project name."
+  description = "Project name"
   type        = string
 }
 
 variable "environment" {
-  description = "Deployment environment."
+  description = "Deployment environment"
   type        = string
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC."
+variable "public_app_subnet_id" {
+  description = "Subnet ID for the application server"
   type        = string
 }
 
-variable "public_subnet_cidr" {
-  description = "Public application subnet."
+variable "private_database_subnet_id" {
+  description = "Subnet ID for the PostgreSQL server"
   type        = string
 }
 
-variable "database_subnet_cidr" {
-  description = "Private PostgreSQL subnet."
+variable "private_redis_subnet_id" {
+  description = "Subnet ID for the Redis server"
   type        = string
 }
 
-variable "redis_subnet_cidr" {
-  description = "Private Redis subnet."
+variable "app_security_group_id" {
+  description = "Security group ID for the application server"
   type        = string
 }
 
-variable "owner_name" {
-  description = "Name of the infrastructure owner."
+variable "database_security_group_id" {
+  description = "Security group ID for PostgreSQL"
   type        = string
 }
 
-variable "allowed_admin_cidr" {
-  description = "IPv4 CIDR allowed to access SSH and development ports."
+variable "redis_security_group_id" {
+  description = "Security group ID for Redis"
   type        = string
 }
 

@@ -1,0 +1,68 @@
+---
+- name: Install Nginx and OpenSSL
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - openssl
+    state: present
+
+- name: Generate temporary self-signed SSL certificate
+  ansible.builtin.command:
+    cmd: >
+      openssl req -x509 -nodes -days 365
+      -newkey rsa:2048
+      -keyout /etc/ssl/private/status-page.key
+      -out /etc/ssl/certs/status-page.crt
+      -subj "/CN={{ status_page_server_name }}"
+  args:
+    creates: /etc/ssl/certs/status-page.crt
+  notify: Restart Nginx
+
+- name: Secure SSL private key
+  ansible.builtin.file:
+    path: /etc/ssl/private/status-page.key
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Copy Status-Page Nginx configuration
+  ansible.builtin.copy:
+    src: /opt/status-page/contrib/nginx.conf
+    dest: /etc/nginx/sites-available/status-page.conf
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+  notify: Restart Nginx
+
+- name: Configure Status-Page server name
+  ansible.builtin.replace:
+    path: /etc/nginx/sites-available/status-page.conf
+    regexp: 'server_name status-page\.example\.com;'
+    replace: 'server_name {{ status_page_server_name }};'
+  notify: Restart Nginx
+
+- name: Remove default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Restart Nginx
+
+- name: Enable Status-Page Nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/status-page.conf
+    dest: /etc/nginx/sites-enabled/status-page.conf
+    state: link
+  notify: Restart Nginx
+
+- name: Validate Nginx configuration
+  ansible.builtin.command:
+    cmd: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: started

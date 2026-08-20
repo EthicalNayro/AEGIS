@@ -38,17 +38,6 @@ resource "aws_vpc_security_group_ingress_rule" "app_ssh" {
   ip_protocol = "tcp"
 }
 
-# Django development server - testing only
-resource "aws_vpc_security_group_ingress_rule" "app_dev" {
-  security_group_id = aws_security_group.app.id
-
-  description = "Allow Django development server from administrator"
-  cidr_ipv4   = var.allowed_admin_cidr
-  from_port   = 8000
-  to_port     = 8000
-  ip_protocol = "tcp"
-}
-
 # Application server needs outbound access
 resource "aws_vpc_security_group_egress_rule" "app_outbound" {
   security_group_id = aws_security_group.app.id
@@ -84,6 +73,36 @@ resource "aws_vpc_security_group_ingress_rule" "database_from_app" {
   ip_protocol = "tcp"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "database_ssh_from_app" {
+  security_group_id = aws_security_group.database.id
+
+  description                  = "Allow SSH from application server"
+  referenced_security_group_id = aws_security_group.app.id
+
+  from_port   = 22
+  to_port     = 22
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "database_http_outbound" {
+  security_group_id = aws_security_group.database.id
+
+  description = "Allow HTTP outbound for package updates"
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 80
+  to_port     = 80
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "database_https_outbound" {
+  security_group_id = aws_security_group.database.id
+
+  description = "Allow HTTPS outbound for package updates"
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 443
+  to_port     = 443
+  ip_protocol = "tcp"
+}
 
 # --------------------------------------------------
 # Redis Security Group
@@ -107,5 +126,36 @@ resource "aws_vpc_security_group_ingress_rule" "redis_from_app" {
 
   from_port   = 6379
   to_port     = 6379
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "redis_ssh_from_app" {
+  security_group_id = aws_security_group.redis.id
+
+  description                  = "Allow SSH from application server"
+  referenced_security_group_id = aws_security_group.app.id
+
+  from_port   = 22
+  to_port     = 22
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "redis_http_outbound" {
+  security_group_id = aws_security_group.redis.id
+
+  description = "Allow HTTP outbound for package updates"
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 80
+  to_port     = 80
+  ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "redis_https_outbound" {
+  security_group_id = aws_security_group.redis.id
+
+  description = "Allow HTTPS outbound for package updates"
+  cidr_ipv4   = "0.0.0.0/0"
+  from_port   = 443
+  to_port     = 443
   ip_protocol = "tcp"
 }
