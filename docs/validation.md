@@ -37,6 +37,23 @@ Repeated execution should leave already-correct configuration unchanged except f
 
 ![Ansible final idempotency](screenshots/18-ansible-final-idempotency.png)
 
+## Django Host Validation
+
+The final hardening pass verifies that Django has exactly one active `ALLOWED_HOSTS` assignment and does not accept a wildcard host.
+
+```bash
+sudo -u status-page grep '^ALLOWED_HOSTS' \
+  /opt/status-page/statuspage/statuspage/configuration.py
+```
+
+Expected shape:
+
+```text
+ALLOWED_HOSTS = ["<app-public-ip>", "127.0.0.1", "localhost"]
+```
+
+There should be one matching line only, and `"*"` must not appear.
+
 ## Service Health
 
 On the application EC2 instance:
@@ -99,6 +116,14 @@ The intended path is:
 ```text
 HTTPS :443 -> Nginx -> Gunicorn :8001 -> Django
 ```
+
+A direct local verification on the application host can be performed with:
+
+```bash
+curl -kI https://127.0.0.1
+```
+
+The expected response is an HTTP `200` through Nginx.
 
 ## Private Testing Path
 

@@ -39,7 +39,7 @@ variable "owner_name" {
 }
 
 variable "allowed_admin_cidr" {
-  description = "IPv4 CIDR allowed to access SSH and development ports."
+  description = "IPv4 CIDR allowed to access SSH on the public application host."
   type        = string
 }
 

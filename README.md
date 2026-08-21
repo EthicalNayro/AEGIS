@@ -8,7 +8,7 @@ Infrastructure foundation for an **Autonomous Cloud Security & Incident Response
 
 ---
 
-## Phase 1 — Foundation
+## Phase 1 — Foundation ✅ Complete
 
 The deployed foundation includes:
 
@@ -92,6 +92,7 @@ The public subnet routes Internet traffic through an Internet Gateway. Both priv
 - EC2 root volumes are encrypted.
 - EC2 instances require IMDSv2 tokens.
 - Django and database secrets are stored in an encrypted Ansible Vault file.
+- Django `ALLOWED_HOSTS` is explicitly restricted to the current application endpoint plus local loopback hosts.
 
 > The current dev environment uses a self-signed TLS certificate. Trusted TLS with a custom domain is a future hardening step.
 
@@ -224,7 +225,7 @@ Ansible is re-run to verify configuration idempotency:
 ansible-playbook playbooks/site.yml --ask-vault-pass
 ```
 
-Runtime checks include systemd services, listening ports, private PostgreSQL/Redis connectivity, the production HTTPS path, and the private SSH-tunneled testing path.
+Runtime checks include systemd services, listening ports, private PostgreSQL/Redis connectivity, restricted Django host configuration, the production HTTPS path, and the private SSH-tunneled testing path.
 
 See [Validation](docs/validation.md) for the full checklist.
 
@@ -240,11 +241,11 @@ See [Validation](docs/validation.md) for the full checklist.
 ├── aegis/              # Reserved for the future AEGIS core
 ├── status-page/        # Reserved project area
 ├── platform/           # Reserved platform extensions
-├── tests/              # Project tests
-└── .github/workflows/  # CI validation
+├── tests/              # Reserved test scaffolding for later phases
+└── .github/workflows/  # Terraform CI validation
 ```
 
-The `aegis/` directory is intentionally still empty apart from repository scaffolding. Detection, investigation, AI agents and governed remediation belong to later phases.
+The `aegis/` directory is intentionally still empty apart from repository scaffolding. Detection, investigation, AI agents and governed remediation belong to later phases. The `tests/` tree is also scaffolding-only in Phase 1; current automated verification is the Terraform CI workflow, complemented by the documented infrastructure and runtime validation evidence.
 
 ---
 
@@ -252,6 +253,7 @@ The `aegis/` directory is intentionally still empty apart from repository scaffo
 
 | Component | Status |
 |---|---|
+| Phase 1 — Platform Foundation | ✅ Complete |
 | AWS VPC / subnet foundation | ✅ Deployed |
 | Internet Gateway / routing | ✅ Deployed |
 | NAT Gateway | ✅ Deployed |
