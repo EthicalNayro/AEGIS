@@ -4,7 +4,7 @@
 
 Phase 1 applies a simple principle: expose only what the current application needs, keep the data tier private, and separate development access from production traffic.
 
-![AEGIS Foundation Security Architecture](diagrams/02-security-architecture.png)
+![AEGIS Foundation Security Architecture](docs/diagrams/02-security-architecture.png)
 
 ## Network Controls
 
