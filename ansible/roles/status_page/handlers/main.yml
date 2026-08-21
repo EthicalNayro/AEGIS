@@ -1,0 +1,9 @@
+---
+- name: Restart Status-Page runtime
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+    - status-page
+    - status-page-scheduler
+    - status-page-rq

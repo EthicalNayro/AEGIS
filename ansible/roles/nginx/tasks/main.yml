@@ -39,7 +39,7 @@
 - name: Configure Status-Page server name
   ansible.builtin.replace:
     path: /etc/nginx/sites-available/status-page.conf
-    regexp: 'server_name status-page\.example\.com;'
+    regexp: 'server_name\s+[^;]+;'
     replace: 'server_name {{ status_page_server_name }};'
   notify: Restart Nginx
 

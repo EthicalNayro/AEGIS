@@ -113,6 +113,7 @@
 
       SECRET_KEY = {{ status_page_secret_key | to_json }}
   no_log: true
+  notify: Restart Status-Page runtime
 
 - name: Pin compatible Status-Page Python dependencies
   ansible.builtin.copy:
@@ -133,13 +134,14 @@
   ansible.builtin.command:
     cmd: /opt/status-page/upgrade.sh
     chdir: /opt/status-page
-    become_user: status-page
+  become_user: status-page
   environment:
     PYTHON: /usr/bin/python3.10
   when: >
     status_page_repo.changed
     or status_page_local_requirements.changed
     or not status_page_venv.stat.exists
+  notify: Restart Status-Page runtime
 
 - name: Set Status-Page ownership
   ansible.builtin.file:
