@@ -6,28 +6,13 @@ This document describes **Phase 1 — AEGIS Platform Foundation**, the currently
 
 ## Current Architecture
 
+![AEGIS Foundation Network Architecture](diagrams/01-aws-network-architecture.png)
+
 The foundation uses three Ubuntu 22.04 EC2 instances inside one VPC:
 
 - **Application EC2** in a public subnet
 - **PostgreSQL EC2** in a private database subnet
 - **Redis EC2** in a private Redis subnet
-
-```text
-Internet
-   |
-   | HTTPS :443
-   v
-Application EC2
-   |
-   |-- Nginx
-   |-- Gunicorn 127.0.0.1:8001
-   |-- Django Status Page
-   |-- RQ Worker
-   `-- Scheduler
-   |
-   +-- TCP :5432 --> PostgreSQL EC2 (private)
-   `-- TCP :6379 --> Redis EC2 (private)
-```
 
 The application host is the only Internet-facing compute instance. PostgreSQL and Redis do not receive public IP addresses.
 
@@ -93,9 +78,11 @@ Application EC2
    `------> Redis EC2
 ```
 
-## Development Testing Path
+## Production vs Testing
 
-The Django development server is not publicly exposed. When needed, it binds to `127.0.0.1:8000` on the application host and is reached through an SSH local port forward.
+![AEGIS Production vs Testing Flow](diagrams/03-production-vs-testing-flow.png)
+
+The Django development server is not publicly exposed. When needed, it binds to `127.0.0.1:8000` on the same application host and is reached through an SSH local port forward.
 
 ```text
 Developer Browser
@@ -104,6 +91,8 @@ SSH Tunnel
   -> aegis-app:127.0.0.1:8000
 Django runserver
 ```
+
+Production and testing therefore share the same foundation resources but use different access paths.
 
 ## Infrastructure Ownership
 
