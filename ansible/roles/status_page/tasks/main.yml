@@ -78,13 +78,19 @@
     group: status-page
     mode: "0640"
 
+- name: Configure Django allowed hosts
+  ansible.builtin.lineinfile:
+    path: /opt/status-page/statuspage/statuspage/configuration.py
+    regexp: '^ALLOWED_HOSTS\s*='
+    line: 'ALLOWED_HOSTS = {{ status_page_allowed_hosts | to_json }}'
+    firstmatch: true
+  notify: Restart Status-Page runtime
+
 - name: Configure Status-Page
   ansible.builtin.blockinfile:
     path: /opt/status-page/statuspage/statuspage/configuration.py
     marker: "# {mark} ANSIBLE MANAGED CONFIGURATION"
     block: |
-      ALLOWED_HOSTS = {{ status_page_allowed_hosts | to_json }}
-
       DATABASE = {
           'NAME': {{ status_page_db_name | to_json }},
           'USER': {{ status_page_db_user | to_json }},
