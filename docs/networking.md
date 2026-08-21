@@ -8,6 +8,8 @@ The AEGIS foundation uses a single VPC:
 10.0.0.0/16
 ```
 
+![AEGIS Foundation Network Architecture](diagrams/01-aws-network-architecture.png)
+
 Subnets:
 
 | Tier | CIDR | Exposure | Primary Workload |
