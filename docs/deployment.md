@@ -4,6 +4,8 @@
 
 Phase 1 deployment is intentionally operator-driven. GitHub stores the code and runs Terraform CI validation, while actual infrastructure and configuration changes are applied manually from the administrator workstation.
 
+![AEGIS Foundation Deployment Workflow](diagrams/04-deployment-automation-flow.png)
+
 ```text
 Developer / WSL
       |
