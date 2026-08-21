@@ -28,38 +28,7 @@ The deployed foundation includes:
 
 ## Foundation Architecture
 
-```text
-                              Internet
-                                 |
-                                 | HTTPS :443
-                                 v
-                     +-------------------------+
-                     |   Application EC2       |
-                     |   Public subnet         |
-                     |                         |
-                     |   Nginx :443            |
-                     |        |                |
-                     |        v                |
-                     |   Gunicorn              |
-                     |   127.0.0.1:8001        |
-                     |        |                |
-                     |        v                |
-                     |   Django Status Page    |
-                     |                         |
-                     |   RQ Worker             |
-                     |   Scheduler             |
-                     +------------+------------+
-                                  |
-                    +-------------+-------------+
-                    |                           |
-                    | TCP :5432                 | TCP :6379
-                    v                           v
-          +--------------------+      +--------------------+
-          | PostgreSQL EC2     |      | Redis EC2          |
-          | Private subnet     |      | Private subnet     |
-          | No public IP       |      | No public IP       |
-          +--------------------+      +--------------------+
-```
+![AEGIS Foundation Network Architecture](docs/diagrams/01-aws-network-architecture.png)
 
 The application server is the only Internet-facing compute instance. PostgreSQL and Redis remain private and accept application traffic only from the application security group.
 
@@ -110,6 +79,8 @@ The public subnet routes Internet traffic through an Internet Gateway. Both priv
 
 ## Security Highlights
 
+![AEGIS Foundation Security Architecture](docs/diagrams/02-security-architecture.png)
+
 - HTTPS `443` is the public application entry point.
 - SSH `22` to the application host is restricted to the configured administrator CIDR.
 - PostgreSQL `5432` accepts traffic only from the application security group.
@@ -130,49 +101,14 @@ See [Security Design](docs/security.md) for details.
 
 ## Production vs Testing
 
-### Production path
+![AEGIS Production vs Testing Flow](docs/diagrams/03-production-vs-testing-flow.png)
 
-```text
-Internet
-   |
-   | HTTPS :443
-   v
-Nginx
-   |
-   | 127.0.0.1:8001
-   v
-Gunicorn
-   |
-   v
-Django
-```
+Production and testing use the **same Application EC2 instance**. The difference is the access path:
 
-### Testing path
+- Production: `HTTPS :443 → Nginx → Gunicorn 127.0.0.1:8001 → Django`
+- Testing: `localhost:8000 → SSH tunnel → Django runserver 127.0.0.1:8000`
 
-The Django development server is retained for controlled testing without reopening port `8000` publicly.
-
-```text
-Developer Browser
-       |
-       | http://localhost:8000
-       v
-Encrypted SSH Tunnel
-       |
-       v
-Application EC2
-       |
-       | 127.0.0.1:8000
-       v
-Django runserver
-```
-
-Example tunnel:
-
-```bash
-ssh -L 8000:127.0.0.1:8000 aegis-app
-```
-
-This keeps the development interface private while production traffic continues through Nginx and Gunicorn.
+Port `8000` is not publicly exposed.
 
 ---
 
@@ -229,6 +165,8 @@ ansible/
 ---
 
 ## Deployment Workflow
+
+![AEGIS Foundation Deployment Workflow](docs/diagrams/04-deployment-automation-flow.png)
 
 Deployment is currently **operator-driven**, not continuous deployment.
 
