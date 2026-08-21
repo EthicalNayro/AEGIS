@@ -88,6 +88,25 @@ The active dev composition provisions:
 - Application, database and Redis Security Groups
 - Three EC2 instances and the project SSH key pair
 
+### Configuration handoff after provisioning
+
+Phase 1 intentionally keeps the Terraform-to-Ansible handoff operator-driven. After a fresh apply or any EC2 replacement, read the current addresses from Terraform:
+
+```bash
+terraform output app_public_ip
+terraform output app_private_ip
+terraform output database_private_ip
+terraform output redis_private_ip
+```
+
+Synchronize those values before running Ansible:
+
+- Update the current dev endpoints in `ansible/inventories/dev/group_vars/all/main.yml`.
+- Update the `HostName` values in the administrator workstation's `~/.ssh/config` aliases.
+- Verify reachability with `ansible all -m ping` before applying the playbook.
+
+This manual handoff is part of the current Phase 1 design; dynamic inventory or automated output-to-configuration synchronization is future work.
+
 Private-subnet outbound connectivity through the NAT Gateway was validated before package installation:
 
 ![Private subnet NAT egress](screenshots/05-private-subnet-nat-egress.png)

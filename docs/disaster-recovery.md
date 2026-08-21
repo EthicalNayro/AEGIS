@@ -19,7 +19,7 @@ Terraform can recreate the AWS foundation:
 - EC2 instances
 - SSH key-pair registration
 
-Ansible can recreate host configuration and the Status Page runtime:
+Ansible can recreate host configuration and the Status Page runtime after the newly provisioned Terraform outputs are synchronized into the current dev Ansible variables and administrator SSH aliases:
 
 - PostgreSQL packages and database configuration
 - Redis configuration
@@ -40,6 +40,7 @@ Phase 1 does not yet provide:
 - Automated restore testing
 - Remote Terraform state locking/backups
 - Trusted certificate automation
+- Automated synchronization of Terraform instance addresses into Ansible inventory variables and SSH configuration
 
 ## Recovery Principle
 
@@ -49,12 +50,15 @@ The present recovery model is:
 Git repository
    |
    +--> Terraform -> rebuild AWS infrastructure
+   |                  |
+   |                  `--> operator syncs Terraform outputs
+   |                       into Ansible / SSH configuration
    |
    `--> Ansible -> rebuild host/application configuration
 ```
 
-Persistent application data is the main remaining recovery risk. Backup and restore automation should be added before treating the platform as production-ready.
+Persistent application data is the main remaining recovery risk. The address handoff is also intentionally manual in Phase 1 and must be completed after EC2 replacement before Ansible is re-run. Backup and restore automation should be added before treating the platform as production-ready.
 
 ## Future Hardening
 
-Planned improvements include automated PostgreSQL backups, documented restore procedures, health checks, high availability, and routine recovery testing.
+Planned improvements include automated PostgreSQL backups, documented restore procedures, dynamic inventory or automated Terraform-output synchronization, health checks, high availability, and routine recovery testing.
