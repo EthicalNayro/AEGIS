@@ -6,6 +6,7 @@ ansible_python_interpreter: /usr/bin/python3.10
 status_page_db_name: statuspage
 status_page_db_user: statuspage
 
+# Current dev addresses are taken from Terraform outputs after provisioning.
 status_page_db_host: "10.0.10.39"
 status_page_redis_host: "10.0.20.141"
 status_page_app_private_ip: "10.0.1.55"
@@ -17,4 +18,6 @@ redis_port: 6379
 status_page_version: "v2.5.1"
 
 status_page_allowed_hosts:
-  - "*"
+  - "{{ status_page_server_name }}"
+  - "127.0.0.1"
+  - "localhost"
