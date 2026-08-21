@@ -37,6 +37,10 @@ Ansible
 - AWS credentials/profile with the required project permissions
 - `community.postgresql` Ansible collection
 
+The local toolchain used for the foundation was verified before deployment:
+
+![Local tooling prerequisites](screenshots/01-local-tooling-prerequisites.png)
+
 Install Ansible collection requirements:
 
 ```bash
@@ -58,6 +62,18 @@ terraform plan
 terraform apply
 ```
 
+Terraform initialization completed successfully with the pinned AWS provider:
+
+![Terraform init success](screenshots/02-terraform-init-success.png)
+
+The initial network plan showed the expected foundation resources before apply:
+
+![Terraform network plan](screenshots/03-terraform-network-plan.png)
+
+The first network foundation apply completed successfully:
+
+![Terraform network apply](screenshots/04-terraform-network-apply.png)
+
 `terraform.tfvars` is local and ignored by Git. `terraform.tfvars.example` documents the expected input shape without storing local secrets or state.
 
 The active dev composition provisions:
@@ -71,6 +87,10 @@ The active dev composition provisions:
 - NAT Gateway and Elastic IP
 - Application, database and Redis Security Groups
 - Three EC2 instances and the project SSH key pair
+
+Private-subnet outbound connectivity through the NAT Gateway was validated before package installation:
+
+![Private subnet NAT egress](screenshots/05-private-subnet-nat-egress.png)
 
 ## SSH Administration
 
@@ -98,11 +118,41 @@ export ANSIBLE_CONFIG="$(pwd)/ansible.cfg"
 ansible-playbook playbooks/site.yml --ask-vault-pass
 ```
 
+Before applying roles, Ansible connectivity to all three hosts was verified:
+
+![Ansible connectivity to all hosts](screenshots/06-ansible-connectivity-all-hosts.png)
+
 The playbook applies:
 
 - `common`, `status_page`, `gunicorn`, `nginx` to the application host
 - `common`, `postgres` to the database host
 - `common`, `redis` to the Redis host
+
+### PostgreSQL
+
+The PostgreSQL role configures private network access and restricts the application database to the application host:
+
+![PostgreSQL network configuration](screenshots/07-postgresql-network-configuration.png)
+
+The `statuspage` database and application role were verified after configuration:
+
+![PostgreSQL database and user verified](screenshots/08-postgresql-database-user-verified.png)
+
+### Redis
+
+The Redis role installs and configures Redis on the private host:
+
+![Redis Ansible deployment](screenshots/09-redis-ansible-deployment.png)
+
+Redis service health, `PONG`, and private-interface listener state were verified:
+
+![Redis service and listener verified](screenshots/10-redis-service-listener-verified.png)
+
+### Status Page Application
+
+The application role installs dependencies, configures the service account and application, and prepares the Status Page runtime:
+
+![Status Page Ansible installation](screenshots/11-status-page-ansible-installation.png)
 
 ## Production Runtime
 
@@ -115,7 +165,17 @@ status-page-rq
 status-page-scheduler
 ```
 
-Nginx accepts HTTPS `443` and proxies to Gunicorn on `127.0.0.1:8001`.
+The systemd services were verified as active:
+
+![Status Page systemd services](screenshots/12-systemd-application-services.png)
+
+Nginx and the temporary self-signed TLS certificate are configured by Ansible:
+
+![Nginx HTTPS deployment](screenshots/13-nginx-https-deployment.png)
+
+The complete local production chain was then verified: Nginx on `443`, Gunicorn on `127.0.0.1:8001`, and a successful HTTPS response through Nginx:
+
+![Nginx to Gunicorn HTTPS chain](screenshots/14-nginx-gunicorn-https-chain.png)
 
 ## Testing Runtime
 
@@ -136,6 +196,8 @@ ssh -L 8000:127.0.0.1:8000 aegis-app
 ```
 
 Then browse to `http://localhost:8000`.
+
+The testing path is validated separately in [Validation](validation.md) because it must remain private and must not reopen TCP `8000` to the Internet.
 
 ## GitHub Actions Scope
 

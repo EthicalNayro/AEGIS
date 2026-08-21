@@ -22,6 +22,10 @@ PostgreSQL and Redis hosts in private subnets could not complete package install
 
 A NAT Gateway was added in the public subnet and the private route table received a default route through NAT. APT was also configured to prefer IPv4 because package operations were attempting unusable IPv6 paths.
 
+The successful private-subnet egress test is preserved in the deployment evidence:
+
+![Private subnet NAT egress](screenshots/05-private-subnet-nat-egress.png)
+
 ## SSM / PrivateLink Attempt
 
 ### Symptom
@@ -62,6 +66,8 @@ The Django development server started successfully but its auto-reloader failed 
 
 Run the development server from `/opt/status-page` as the `status-page` user and use `--noreload` for controlled testing.
 
+The final private testing workflow is documented in [Validation](validation.md) and uses an SSH tunnel rather than public TCP `8000`.
+
 ## Status Page Documentation Build Failure
 
 ### Symptom
@@ -85,6 +91,10 @@ mkdocs-autorefs==1.0.1
 ### Resolution
 
 Application-owned files are consistently owned by `status-page`, and the upgrade task executes as the application service account.
+
+The final Ansible run confirms the configuration settles into an idempotent state:
+
+![Ansible final idempotency](screenshots/18-ansible-final-idempotency.png)
 
 ## Ansible Idempotency: Nginx Configuration
 
