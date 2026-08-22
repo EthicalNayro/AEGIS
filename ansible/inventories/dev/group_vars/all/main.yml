@@ -5,6 +5,10 @@ ansible_python_interpreter: /usr/bin/python3.10
 
 status_page_db_name: statuspage
 status_page_db_user: statuspage
+# AEGIS incident database
+aegis_db_name: aegis
+aegis_db_user: aegis
+aegis_db_host: "{{ status_page_db_host }}"
 
 # Current dev addresses are taken from Terraform outputs after provisioning.
 status_page_db_host: "10.0.10.39"

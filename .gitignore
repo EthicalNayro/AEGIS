@@ -42,3 +42,5 @@ Thumbs.db
 staticfiles/
 media/
 logs/
+
+*.egg-info/
