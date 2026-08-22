@@ -5,8 +5,12 @@ import boto3
 
 
 class CloudTrailCollector:
-    def __init__(self, region: str = "us-east-1") -> None:
-        self.client = boto3.client(
+    def __init__(
+        self,
+        region: str = "us-east-1",
+        client: Any | None = None,
+    ) -> None:
+        self.client = client or boto3.client(
             "cloudtrail",
             region_name=region,
         )
@@ -17,32 +21,52 @@ class CloudTrailCollector:
         max_results: int = 50,
         event_name: str | None = None,
     ) -> list[dict[str, Any]]:
+        if max_results < 1:
+            return []
+
         end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(minutes=minutes)
 
-        request: dict[str, Any] = {
-            "StartTime": start_time,
-            "EndTime": end_time,
-            "MaxResults": max_results,
-        }
+        collected_events: list[dict[str, Any]] = []
+        next_token: str | None = None
 
-        if event_name:
-            request["LookupAttributes"] = [
-                {
-                    "AttributeKey": "EventName",
-                    "AttributeValue": event_name,
-                }
-            ]
+        while len(collected_events) < max_results:
+            remaining = max_results - len(collected_events)
 
-        response = self.client.lookup_events(**request)
+            request: dict[str, Any] = {
+                "StartTime": start_time,
+                "EndTime": end_time,
+                "MaxResults": min(50, remaining),
+            }
 
-        events = response.get("Events", [])
+            if event_name:
+                request["LookupAttributes"] = [
+                    {
+                        "AttributeKey": "EventName",
+                        "AttributeValue": event_name,
+                    }
+                ]
 
-        return [
-            event
-            for event in events
-            if not self._is_collector_noise(event)
-        ]
+            if next_token:
+                request["NextToken"] = next_token
+
+            response = self.client.lookup_events(**request)
+
+            for event in response.get("Events", []):
+                if self._is_collector_noise(event):
+                    continue
+
+                collected_events.append(event)
+
+                if len(collected_events) >= max_results:
+                    break
+
+            next_token = response.get("NextToken")
+
+            if not next_token:
+                break
+
+        return collected_events
 
     @staticmethod
     def _is_collector_noise(event: dict[str, Any]) -> bool:
