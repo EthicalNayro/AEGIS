@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Protocol
 
+from botocore.exceptions import ClientError
+
 from aegis.models.event import NormalizedEvent
 
 
@@ -43,7 +45,8 @@ class Ec2SecurityGroupTagScope:
             or not event.resource_id
         ):
             logger.debug(
-                "Scope DENIED resource=%s reason=unsupported-resource",
+                "Scope DENIED resource=%s "
+                "reason=unsupported-resource",
                 event.resource_id,
             )
             return False
@@ -52,10 +55,36 @@ class Ec2SecurityGroupTagScope:
             response = self.ec2_client.describe_security_groups(
                 GroupIds=[event.resource_id]
             )
+
+        except ClientError as error:
+            error_code = (
+                error.response
+                .get("Error", {})
+                .get("Code", "Unknown")
+            )
+
+            if error_code == "InvalidGroup.NotFound":
+                logger.debug(
+                    "Scope DENIED resource=%s "
+                    "reason=resource-not-found",
+                    event.resource_id,
+                )
+            else:
+                logger.warning(
+                    "Scope DENIED resource=%s "
+                    "reason=validation-failed "
+                    "error=%s",
+                    event.resource_id,
+                    error_code,
+                )
+
+            return False
+
         except Exception as error:
             logger.warning(
                 "Scope DENIED resource=%s "
-                "reason=validation-failed error=%s",
+                "reason=validation-failed "
+                "error=%s",
                 event.resource_id,
                 type(error).__name__,
             )
@@ -68,7 +97,8 @@ class Ec2SecurityGroupTagScope:
 
         if len(security_groups) != 1:
             logger.debug(
-                "Scope DENIED resource=%s reason=resource-not-found",
+                "Scope DENIED resource=%s "
+                "reason=resource-not-found",
                 event.resource_id,
             )
             return False

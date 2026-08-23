@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from threading import Event
 from typing import Any
 
+from aegis.models.pipeline import PipelineRunResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ class SecurityWorker:
             lambda: datetime.now(timezone.utc)
         )
 
-    def run_once(self) -> list[tuple[Any, bool]]:
+    def run_once(self) -> PipelineRunResult:
         cycle_started_at = self._now()
 
         effective_lookback = self.lookback_minutes
@@ -97,7 +99,7 @@ class SecurityWorker:
                     self.lookback_minutes,
                 )
 
-        results = self.pipeline.run(
+        result = self.pipeline.run(
             minutes=effective_lookback,
             max_results=self.max_results,
             event_name=self.event_name,
@@ -109,7 +111,7 @@ class SecurityWorker:
                 cycle_started_at,
             )
 
-        return results
+        return result
 
     def run_forever(
         self,
@@ -124,7 +126,7 @@ class SecurityWorker:
             self.lookback_minutes,
         )
 
-        empty_cycles = 0
+        quiet_cycles = 0
 
         heartbeat_cycles = max(
             1,
@@ -135,45 +137,56 @@ class SecurityWorker:
 
         while not stop_event.is_set():
             try:
-                results = self.run_once()
+                result = self.run_once()
 
-                inserted = sum(
-                    1
-                    for _, was_inserted in results
-                    if was_inserted
-                )
-
-                duplicates = (
-                    len(results) - inserted
-                )
-
-                if results:
-                    empty_cycles = 0
+                if result.inserted > 0:
+                    quiet_cycles = 0
 
                     logger.info(
                         "AEGIS polling cycle completed: "
-                        "incidents=%s inserted=%s duplicates=%s",
-                        len(results),
-                        inserted,
-                        duplicates,
+                        "events=%s normalized=%s "
+                        "in_scope=%s detections=%s "
+                        "inserted=%s duplicates=%s",
+                        result.collected_events,
+                        result.normalized_events,
+                        result.in_scope_events,
+                        result.detections,
+                        result.inserted,
+                        result.duplicates,
                     )
 
                 else:
-                    empty_cycles += 1
+                    quiet_cycles += 1
+
+                    logger.debug(
+                        "AEGIS polling cycle completed: "
+                        "events=%s normalized=%s "
+                        "in_scope=%s detections=%s "
+                        "inserted=%s duplicates=%s",
+                        result.collected_events,
+                        result.normalized_events,
+                        result.in_scope_events,
+                        result.detections,
+                        result.inserted,
+                        result.duplicates,
+                    )
 
                     if (
-                        empty_cycles
+                        quiet_cycles
                         % heartbeat_cycles
                         == 0
                     ):
                         logger.info(
                             "AEGIS worker healthy: "
-                            "no security incidents detected"
-                        )
-                    else:
-                        logger.debug(
-                            "AEGIS polling cycle completed: "
-                            "no incidents"
+                            "events=%s normalized=%s "
+                            "in_scope=%s detections=%s "
+                            "inserted=%s duplicates=%s",
+                            result.collected_events,
+                            result.normalized_events,
+                            result.in_scope_events,
+                            result.detections,
+                            result.inserted,
+                            result.duplicates,
                         )
 
             except Exception:

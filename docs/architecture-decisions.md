@@ -108,24 +108,60 @@ AEGIS processes only resources that can be explicitly verified as in scope. New 
 
 ### Context
 
-Overlapping polling and checkpoint reads caused repetitive `INFO` logs for routine scope evaluations, checkpoint housekeeping, and empty polling cycles. Although technically correct, the output obscured meaningful operator signals and made a healthy worker appear noisy.
+Overlapping polling and checkpoint reads can generate repetitive operational output during normal processing. At-least-once replay also means previously detected events may appear again as duplicates even though no new security incident has been created.
 
-Suppressing all normal-cycle output, however, made the long-running worker appear stalled.
+During recovery, CloudTrail can reference resources that no longer exist. Treating expected historical conditions such as a deleted Security Group as warnings creates noise and makes genuine AWS validation failures harder to identify.
+
+Suppressing all normal-cycle output, however, would make the long-running worker appear stalled and would provide little visibility into whether each stage of the security pipeline is functioning.
 
 ### Decision
 
-AEGIS uses log levels based on operational significance:
+AEGIS uses log levels based on operational significance and exposes pipeline execution telemetry.
 
-- routine scope evaluation, checkpoint reads, and empty cycles use `DEBUG`;
-- meaningful restart recovery uses `INFO`;
-- incident-processing summaries use `INFO`;
-- a periodic health heartbeat uses `INFO` to prove liveness without logging every cycle;
-- scope-validation failures use `WARNING`;
+Each pipeline execution records:
+
+```text
+collected events
+→ normalized events
+→ in-scope events
+→ detections
+→ inserted incidents / duplicates
+```
+
+Operational logging follows these rules:
+
+- routine scope evaluation and checkpoint reads use `DEBUG`;
+- routine empty or duplicate-only polling cycles use `DEBUG`;
+- newly inserted security incidents produce an immediate `INFO` summary;
+- periodic health heartbeats use `INFO` and include pipeline telemetry;
+- meaningful worker recovery uses `INFO`;
+- historical resources that no longer exist, such as `InvalidGroup.NotFound`, remain fail-closed but are logged at `DEBUG`;
+- unexpected AWS validation failures, permission failures, and similar operational problems use `WARNING`;
 - polling-cycle failures use `ERROR`.
+
+Duplicate-only cycles are not treated as new security signals. They remain expected behavior under the at-least-once processing model.
 
 ### Consequences
 
-Normal operation is quiet but visibly alive. Incidents, recovery, and failures remain easy to identify in operator output.
+Normal operation remains quiet while still providing periodic evidence that CloudTrail collection, normalization, scope enforcement, detection, and persistence are functioning.
+
+Operators can distinguish between:
+
+```text
+no source activity
+vs
+out-of-scope activity
+vs
+in-scope activity with no detection
+vs
+duplicate replay
+vs
+a newly persisted security incident
+```
+
+Expected recovery conditions do not hide genuine AWS or runtime failures behind excessive warning output.
+
+The same pipeline telemetry also provides a foundation for future metrics and monitoring integrations without coupling those systems directly to detection logic.
 
 ---
 

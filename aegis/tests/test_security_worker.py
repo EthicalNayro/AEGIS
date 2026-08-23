@@ -2,20 +2,32 @@ from datetime import datetime, timezone
 
 import pytest
 
+from aegis.models.pipeline import PipelineRunResult
 from aegis.workers.security import SecurityWorker
 
 
 class FakePipeline:
-    def __init__(self, results=None):
+    def __init__(self, result=None):
         self.calls = []
-        self.results = results or [
-            ("incident-1", True),
-            ("incident-2", False),
-        ]
+
+        self.result = (
+            result
+            if result is not None
+            else PipelineRunResult(
+                collected_events=2,
+                normalized_events=2,
+                in_scope_events=1,
+                detections=2,
+                incidents=[
+                    ("incident-1", True),
+                    ("incident-2", False),
+                ],
+            )
+        )
 
     def run(self, **kwargs):
         self.calls.append(kwargs)
-        return self.results
+        return self.result
 
 
 class FakeCheckpointRepository:
@@ -27,7 +39,12 @@ class FakeCheckpointRepository:
         return self.checkpoint
 
     def save(self, worker_name, checkpoint):
-        self.saved.append((worker_name, checkpoint))
+        self.saved.append(
+            (
+                worker_name,
+                checkpoint,
+            )
+        )
 
 
 def test_worker_run_once_calls_pipeline_with_configuration():
@@ -41,9 +58,17 @@ def test_worker_run_once_calls_pipeline_with_configuration():
         event_name="AuthorizeSecurityGroupIngress",
     )
 
-    results = worker.run_once()
+    result = worker.run_once()
 
-    assert len(results) == 2
+    assert isinstance(
+        result,
+        PipelineRunResult,
+    )
+
+    assert result.collected_events == 2
+    assert result.inserted == 1
+    assert result.duplicates == 1
+
     assert pipeline.calls == [
         {
             "minutes": 10,
@@ -84,6 +109,7 @@ def test_worker_recovers_from_checkpoint_with_safety_overlap():
         0,
         tzinfo=timezone.utc,
     )
+
     now = datetime(
         2026,
         8,
@@ -93,7 +119,10 @@ def test_worker_recovers_from_checkpoint_with_safety_overlap():
         tzinfo=timezone.utc,
     )
 
-    pipeline = FakePipeline(results=[])
+    pipeline = FakePipeline(
+        result=PipelineRunResult()
+    )
+
     checkpoints = FakeCheckpointRepository(
         checkpoint=checkpoint
     )
@@ -109,8 +138,12 @@ def test_worker_recovers_from_checkpoint_with_safety_overlap():
     worker.run_once()
 
     assert pipeline.calls[0]["minutes"] == 40
+
     assert checkpoints.saved == [
-        ("test-worker", now)
+        (
+            "test-worker",
+            now,
+        )
     ]
 
 
@@ -124,7 +157,10 @@ def test_worker_uses_default_lookback_without_checkpoint():
         tzinfo=timezone.utc,
     )
 
-    pipeline = FakePipeline(results=[])
+    pipeline = FakePipeline(
+        result=PipelineRunResult()
+    )
+
     checkpoints = FakeCheckpointRepository()
 
     worker = SecurityWorker(
@@ -138,15 +174,21 @@ def test_worker_uses_default_lookback_without_checkpoint():
     worker.run_once()
 
     assert pipeline.calls[0]["minutes"] == 10
+
     assert checkpoints.saved == [
-        ("test-worker", now)
+        (
+            "test-worker",
+            now,
+        )
     ]
 
 
 def test_worker_does_not_advance_checkpoint_on_pipeline_failure():
     class FailingPipeline:
         def run(self, **kwargs):
-            raise RuntimeError("simulated pipeline failure")
+            raise RuntimeError(
+                "simulated pipeline failure"
+            )
 
     now = datetime(
         2026,
@@ -156,6 +198,7 @@ def test_worker_does_not_advance_checkpoint_on_pipeline_failure():
         30,
         tzinfo=timezone.utc,
     )
+
     checkpoints = FakeCheckpointRepository()
 
     worker = SecurityWorker(

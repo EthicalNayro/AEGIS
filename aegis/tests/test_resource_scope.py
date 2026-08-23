@@ -1,10 +1,17 @@
+import logging
 from types import SimpleNamespace
+
+from botocore.exceptions import ClientError
 
 from aegis.scope.resources import Ec2SecurityGroupTagScope
 
 
 class FakeEc2Client:
-    def __init__(self, security_groups=None, error=None):
+    def __init__(
+        self,
+        security_groups=None,
+        error=None,
+    ):
         self.security_groups = security_groups or []
         self.error = error
         self.calls = []
@@ -20,10 +27,26 @@ class FakeEc2Client:
         }
 
 
-def security_group_event(resource_id="sg-test"):
+def security_group_event(
+    resource_id="sg-test",
+):
     return SimpleNamespace(
         resource_type="security_group",
         resource_id=resource_id,
+    )
+
+
+def make_client_error(
+    code: str,
+) -> ClientError:
+    return ClientError(
+        {
+            "Error": {
+                "Code": code,
+                "Message": "simulated AWS error",
+            }
+        },
+        "DescribeSecurityGroups",
     )
 
 
@@ -44,8 +67,18 @@ def test_scope_allows_explicitly_enabled_security_group():
 
     policy = Ec2SecurityGroupTagScope(client)
 
-    assert policy.allows(security_group_event()) is True
-    assert client.calls == [{"GroupIds": ["sg-test"]}]
+    assert (
+        policy.allows(
+            security_group_event()
+        )
+        is True
+    )
+
+    assert client.calls == [
+        {
+            "GroupIds": ["sg-test"],
+        }
+    ]
 
 
 def test_scope_denies_security_group_without_opt_in_tag():
@@ -60,7 +93,12 @@ def test_scope_denies_security_group_without_opt_in_tag():
 
     policy = Ec2SecurityGroupTagScope(client)
 
-    assert policy.allows(security_group_event()) is False
+    assert (
+        policy.allows(
+            security_group_event()
+        )
+        is False
+    )
 
 
 def test_scope_denies_wrong_tag_value():
@@ -80,12 +118,20 @@ def test_scope_denies_wrong_tag_value():
 
     policy = Ec2SecurityGroupTagScope(client)
 
-    assert policy.allows(security_group_event()) is False
+    assert (
+        policy.allows(
+            security_group_event()
+        )
+        is False
+    )
 
 
 def test_scope_denies_unsupported_resource_without_aws_lookup():
     client = FakeEc2Client()
-    policy = Ec2SecurityGroupTagScope(client)
+
+    policy = Ec2SecurityGroupTagScope(
+        client
+    )
 
     event = SimpleNamespace(
         resource_type="instance",
@@ -98,15 +144,110 @@ def test_scope_denies_unsupported_resource_without_aws_lookup():
 
 def test_scope_fails_closed_when_resource_lookup_fails():
     client = FakeEc2Client(
-        error=RuntimeError("simulated AWS failure")
+        error=RuntimeError(
+            "simulated AWS failure"
+        )
     )
-    policy = Ec2SecurityGroupTagScope(client)
 
-    assert policy.allows(security_group_event()) is False
+    policy = Ec2SecurityGroupTagScope(
+        client
+    )
+
+    assert (
+        policy.allows(
+            security_group_event()
+        )
+        is False
+    )
 
 
 def test_scope_fails_closed_when_security_group_is_not_returned():
-    client = FakeEc2Client(security_groups=[])
-    policy = Ec2SecurityGroupTagScope(client)
+    client = FakeEc2Client(
+        security_groups=[]
+    )
 
-    assert policy.allows(security_group_event()) is False
+    policy = Ec2SecurityGroupTagScope(
+        client
+    )
+
+    assert (
+        policy.allows(
+            security_group_event()
+        )
+        is False
+    )
+
+
+def test_deleted_security_group_is_debug_not_warning(
+    caplog,
+):
+    client = FakeEc2Client(
+        error=make_client_error(
+            "InvalidGroup.NotFound"
+        )
+    )
+
+    policy = Ec2SecurityGroupTagScope(
+        client
+    )
+
+    with caplog.at_level(
+        logging.DEBUG,
+        logger="aegis.scope.resources",
+    ):
+        allowed = policy.allows(
+            security_group_event(
+                "sg-deleted"
+            )
+        )
+
+    assert allowed is False
+
+    assert (
+        "reason=resource-not-found"
+        in caplog.text
+    )
+
+    assert not any(
+        record.levelno >= logging.WARNING
+        for record in caplog.records
+    )
+
+
+def test_real_aws_validation_error_remains_warning(
+    caplog,
+):
+    client = FakeEc2Client(
+        error=make_client_error(
+            "UnauthorizedOperation"
+        )
+    )
+
+    policy = Ec2SecurityGroupTagScope(
+        client
+    )
+
+    with caplog.at_level(
+        logging.WARNING,
+        logger="aegis.scope.resources",
+    ):
+        allowed = policy.allows(
+            security_group_event()
+        )
+
+    assert allowed is False
+
+    assert (
+        "reason=validation-failed"
+        in caplog.text
+    )
+
+    assert (
+        "UnauthorizedOperation"
+        in caplog.text
+    )
+
+    assert any(
+        record.levelno == logging.WARNING
+        for record in caplog.records
+    )

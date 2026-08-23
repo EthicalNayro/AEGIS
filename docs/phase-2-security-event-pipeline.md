@@ -179,23 +179,64 @@ Repeated events caused by the recovery window are safe because incident persiste
 
 ### Signal-oriented observability
 
-The worker intentionally avoids logging every internal decision at `INFO` level.
+The worker uses pipeline execution telemetry rather than relying only on incident output.
 
-Current policy:
+Every pipeline run records:
+
+```text
+collected events
+→ normalized events
+→ in-scope events
+→ detections
+→ inserted incidents / duplicates
+```
+
+This provides visibility into where events move through — or stop inside — the processing path.
+
+For example:
+
+```text
+events=20 normalized=20 in_scope=0 detections=0 inserted=0 duplicates=0
+```
+
+shows that CloudTrail ingestion and normalization are functioning, but none of the collected resources passed the monitoring scope.
+
+A result such as:
+
+```text
+events=20 normalized=20 in_scope=2 detections=1 inserted=0 duplicates=1
+```
+
+shows that detection occurred but the incident had already been persisted during an earlier at-least-once processing cycle.
+
+Current operational logging policy:
 
 | Signal | Level |
 |---|---|
 | Worker start / stop | INFO |
 | Meaningful restart recovery | INFO |
-| Incident-processing summary | INFO |
-| Periodic healthy heartbeat | INFO |
+| Newly inserted security incident | INFO |
+| Periodic health heartbeat with pipeline telemetry | INFO |
 | Routine checkpoint loading | DEBUG |
-| Normal empty polling cycles | DEBUG |
-| Routine scope allow/deny evaluation | DEBUG |
-| Scope validation failure | WARNING |
+| Empty polling cycle | DEBUG |
+| Duplicate-only polling cycle | DEBUG |
+| Routine scope allow / deny evaluation | DEBUG |
+| Historical resource no longer exists (`InvalidGroup.NotFound`) | DEBUG |
+| Unexpected AWS validation / permission failure | WARNING |
 | Polling-cycle failure | ERROR |
 
-This keeps normal operation quiet while preserving visible liveness and important security/operational signals.
+Duplicate-only detections are not treated as new security signals because replay is expected under the at-least-once processing model.
+
+Historical resources referenced by CloudTrail may no longer exist when a recovery window is replayed. These resources still fail scope validation closed, but an expected `InvalidGroup.NotFound` condition is logged at `DEBUG` rather than generating warning noise.
+
+This keeps normal operation quiet while preserving:
+
+- visible worker liveness;
+- meaningful security signals;
+- real AWS/API failures;
+- visibility into every major processing stage.
+
+The telemetry model also creates a clean foundation for future Prometheus, CloudWatch, or other metrics integrations without moving observability logic into the detectors.
 
 ---
 

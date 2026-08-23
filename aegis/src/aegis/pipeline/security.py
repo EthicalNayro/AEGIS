@@ -1,6 +1,7 @@
 from typing import Any
 
 from aegis.incidents.builder import build_incident
+from aegis.models.pipeline import PipelineRunResult
 
 
 class SecurityEventPipeline:
@@ -23,19 +24,23 @@ class SecurityEventPipeline:
         minutes: int = 15,
         max_results: int = 50,
         event_name: str | None = None,
-    ) -> list[tuple[Any, bool]]:
+    ) -> PipelineRunResult:
         events = self.collector.get_recent_events(
             minutes=minutes,
             max_results=max_results,
             event_name=event_name,
         )
 
-        results: list[tuple[Any, bool]] = []
+        result = PipelineRunResult(
+            collected_events=len(events),
+        )
 
         for raw_event in events:
             event = self.normalizer.normalize(
                 raw_event
             )
+
+            result.normalized_events += 1
 
             if (
                 self.scope_policy
@@ -43,7 +48,15 @@ class SecurityEventPipeline:
             ):
                 continue
 
-            detections = self.detector(event)
+            result.in_scope_events += 1
+
+            detections = list(
+                self.detector(event)
+            )
+
+            result.detections += len(
+                detections
+            )
 
             for detection in detections:
                 incident = build_incident(
@@ -55,8 +68,8 @@ class SecurityEventPipeline:
                     incident
                 )
 
-                results.append(
+                result.incidents.append(
                     (incident, inserted)
                 )
 
-        return results
+        return result
