@@ -107,3 +107,16 @@
 
       ALTER TABLE incidents OWNER TO {{ aegis_db_user }};
   become_user: postgres
+
+- name: Create AEGIS worker checkpoints table
+  community.postgresql.postgresql_query:
+    login_db: "{{ aegis_db_name }}"
+    query: |
+      CREATE TABLE IF NOT EXISTS worker_checkpoints (
+          worker_name VARCHAR(128) PRIMARY KEY,
+          last_successful_poll_at TIMESTAMPTZ NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      ALTER TABLE worker_checkpoints OWNER TO {{ aegis_db_user }};
+  become_user: postgres

@@ -1,12 +1,17 @@
 import boto3
+import logging
 import os
+import signal
+from threading import Event
 
 from aegis.collectors.cloudtrail import CloudTrailCollector
 from aegis.detection.security_groups import detect_security_group_exposures
 from aegis.normalization.cloudtrail import CloudTrailNormalizer
 from aegis.pipeline.security import SecurityEventPipeline
 from aegis.scope.resources import Ec2SecurityGroupTagScope
+from aegis.storage.checkpoints import PostgresCheckpointRepository
 from aegis.storage.postgres import PostgresIncidentRepository
+from aegis.workers.security import SecurityWorker
 
 
 def _get_positive_int(name: str, default: int) -> int:
@@ -21,6 +26,16 @@ def _get_positive_int(name: str, default: int) -> int:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format=(
+            "%(asctime)s | %(levelname)s | "
+            "%(name)s | %(message)s"
+        ),
+    )
+
+    logger = logging.getLogger("aegis.runtime")
+
     database_url = os.environ["AEGIS_DATABASE_URL"]
 
     region = os.environ.get(
@@ -28,14 +43,24 @@ def main() -> None:
         "us-east-1",
     )
 
+    poll_interval = _get_positive_int(
+        "AEGIS_POLL_INTERVAL_SECONDS",
+        60,
+    )
+
     lookback_minutes = _get_positive_int(
         "AEGIS_LOOKBACK_MINUTES",
-        60,
+        10,
     )
 
     max_results = _get_positive_int(
         "AEGIS_MAX_RESULTS",
         200,
+    )
+
+    event_name = os.environ.get(
+        "AEGIS_EVENT_NAME",
+        "AuthorizeSecurityGroupIngress",
     )
 
     scope_tag_key = os.environ.get(
@@ -65,7 +90,11 @@ def main() -> None:
         tag_value=scope_tag_value,
     )
 
-    repository = PostgresIncidentRepository(
+    incident_repository = PostgresIncidentRepository(
+        database_url
+    )
+
+    checkpoint_repository = PostgresCheckpointRepository(
         database_url
     )
 
@@ -73,50 +102,50 @@ def main() -> None:
         collector=collector,
         normalizer=normalizer,
         detector=detect_security_group_exposures,
-        repository=repository,
+        repository=incident_repository,
         scope_policy=scope_policy,
     )
 
-    results = pipeline.run(
-        minutes=lookback_minutes,
+    worker = SecurityWorker(
+        pipeline=pipeline,
+        checkpoint_repository=checkpoint_repository,
+        worker_name="aws-security-worker",
+        poll_interval_seconds=poll_interval,
+        lookback_minutes=lookback_minutes,
         max_results=max_results,
-        event_name="AuthorizeSecurityGroupIngress",
+        event_name=event_name,
     )
 
-    if not results:
-        print(
-            "No matching in-scope AEGIS "
-            "security incidents found."
-        )
-        return
+    stop_event = Event()
 
-    for incident, inserted in results:
-        actor = (
-            incident.actor.rsplit("/", 1)[-1]
-            if incident.actor
-            else "unknown"
+    def request_shutdown(signum, frame):
+        logger.info(
+            "Shutdown requested (signal=%s)",
+            signum,
         )
+        stop_event.set()
 
-        print("=" * 60)
-        print("AEGIS SECURITY INCIDENT")
-        print("=" * 60)
-        print(f"Incident ID : {incident.incident_id}")
-        print(f"Status      : {incident.status.value}")
-        print(f"Severity    : {incident.severity.value}")
-        print(f"Finding     : {incident.title}")
-        print(f"Rule        : {incident.rule_id}")
-        print(f"Resource    : {incident.resource_type}")
-        print(f"Actor       : {actor}")
-        print(f"Event Time  : {incident.event_time}")
-        print(
-            "Persistence : "
-            + (
-                "INSERTED"
-                if inserted
-                else "ALREADY EXISTS"
-            )
-        )
-        print()
+    signal.signal(
+        signal.SIGINT,
+        request_shutdown,
+    )
+
+    signal.signal(
+        signal.SIGTERM,
+        request_shutdown,
+    )
+
+    logger.info(
+        "AEGIS continuous security worker starting"
+    )
+
+    worker.run_forever(
+        stop_event=stop_event
+    )
+
+    logger.info(
+        "AEGIS continuous security worker stopped"
+    )
 
 
 if __name__ == "__main__":
