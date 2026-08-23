@@ -42,7 +42,7 @@ class Ec2SecurityGroupTagScope:
             event.resource_type != "security_group"
             or not event.resource_id
         ):
-            logger.info(
+            logger.debug(
                 "Scope DENIED resource=%s reason=unsupported-resource",
                 event.resource_id,
             )
@@ -67,7 +67,7 @@ class Ec2SecurityGroupTagScope:
         )
 
         if len(security_groups) != 1:
-            logger.info(
+            logger.debug(
                 "Scope DENIED resource=%s reason=resource-not-found",
                 event.resource_id,
             )
@@ -77,7 +77,7 @@ class Ec2SecurityGroupTagScope:
             tag["Key"]: tag["Value"]
             for tag in security_groups[0].get(
                 "Tags",
-                []
+                [],
             )
             if "Key" in tag and "Value" in tag
         }
