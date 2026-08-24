@@ -77,20 +77,38 @@ def main() -> None:
         scope_policy=scope_policy,
     )
 
-    results = pipeline.run(
+    result = pipeline.run(
         minutes=lookback_minutes,
         max_results=max_results,
         event_name="AuthorizeSecurityGroupIngress",
     )
 
-    if not results:
+    if not result.incidents:
         print(
             "No matching in-scope AEGIS "
             "security incidents found."
         )
+        print(
+            "Pipeline telemetry: "
+            f"events={result.collected_events} "
+            f"normalized={result.normalized_events} "
+            f"in_scope={result.in_scope_events} "
+            f"detections={result.detections}"
+        )
         return
 
-    for incident, inserted in results:
+    print(
+        "Pipeline telemetry: "
+        f"events={result.collected_events} "
+        f"normalized={result.normalized_events} "
+        f"in_scope={result.in_scope_events} "
+        f"detections={result.detections} "
+        f"inserted={result.inserted} "
+        f"duplicates={result.duplicates}"
+    )
+    print()
+
+    for incident, inserted in result.incidents:
         actor = (
             incident.actor.rsplit("/", 1)[-1]
             if incident.actor
