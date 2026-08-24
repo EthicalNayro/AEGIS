@@ -22,7 +22,8 @@ for raw_event in events:
     event_detections = detect_security_group_exposures(event)
 
     for detection in event_detections:
-        detections.append((event, detection))
+        if detection.rule_id == "AEGIS-AWS-SG-001":
+            detections.append((event, detection))
 
 
 if not detections:

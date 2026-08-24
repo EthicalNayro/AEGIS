@@ -356,7 +356,7 @@ The repository does **not** claim that AEGIS is already a complete autonomous in
 Current Phase 2 limitations include:
 
 - CloudTrail polling is the active event transport;
-- detection currently focuses on Security Group ingress and public SSH exposure;
+- detection currently focuses on Security Group ingress with public SSH and RDP exposure rules;
 - tag-based scope enforcement currently targets EC2 Security Groups;
 - the continuous worker currently runs from the development environment;
 - AI investigation and agent orchestration are not implemented;
