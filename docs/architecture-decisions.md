@@ -183,6 +183,101 @@ The current implementation is suitable for development and validation while pres
 
 ---
 
+
+## ADR-008 — Migrate application compute from standalone EC2 to Amazon EKS
+
+**Status:** Accepted
+
+### Context
+
+The original Phase 1 platform deploys application workloads directly to an EC2 host and uses Ansible and systemd for runtime configuration.
+
+This architecture successfully established the initial platform but couples workload deployment and scaling to individual servers.
+
+### Decision
+
+AEGIS will migrate application compute to Amazon EKS.
+
+The first implementation will use EKS Managed Node Groups with worker nodes in private subnets across two Availability Zones.
+
+Django/Gunicorn, RQ workers, the scheduler, and the AEGIS security worker will become containerized Kubernetes workloads.
+
+The existing EC2 platform will remain available during the migration and will not be destroyed until the EKS replacement is validated.
+
+### Consequences
+
+Application deployment becomes container-oriented rather than server-oriented.
+
+Kubernetes provides scheduling, workload replication, health management, resource governance, and horizontal scaling capabilities.
+
+The platform also gains additional operational complexity including cluster lifecycle, Kubernetes networking, container image management, workload identity, and Kubernetes security controls.
+
+---
+
+## ADR-009 — Use managed AWS services for persistent PostgreSQL and Redis
+
+**Status:** Accepted with deployment prerequisite
+
+### Context
+
+The original platform operates PostgreSQL and Redis directly on private EC2 instances.
+
+Moving the application to Kubernetes does not imply that persistent databases should also move into the cluster.
+
+Operating databases inside Kubernetes would require additional responsibility for storage lifecycle, backup, failover, upgrades, and data durability.
+
+### Decision
+
+The target Phase 1.1 architecture uses Amazon RDS for PostgreSQL and Amazon ElastiCache for Redis.
+
+Persistent application data will remain outside the EKS cluster.
+
+### Consequences
+
+Database lifecycle and availability responsibilities move toward AWS managed services while the Kubernetes cluster remains focused on application and security-processing workloads.
+
+The current project identity does not presently have sufficient RDS or ElastiCache API permissions, so deployment of this decision requires an AWS permission change or pre-provisioned managed services.
+
+The existing EC2 database and Redis services remain in place until replacement services are available and migration is validated.
+
+---
+
+## ADR-010 — Deploy Terraform through approval-gated GitHub Actions
+
+**Status:** Accepted
+
+### Context
+
+The original platform validates Terraform in GitHub Actions but executes Terraform plan/apply operationally from the developer environment.
+
+This creates a difference between code validation and the actual deployment control path.
+
+Long-lived AWS credentials stored in GitHub would also create unnecessary credential-management risk.
+
+### Decision
+
+The target delivery model uses GitHub Actions as the infrastructure deployment control plane.
+
+Pull requests perform validation, testing, security checks, and Terraform planning.
+
+Changes merged to `main` produce a deployment workflow that authenticates to AWS through GitHub OIDC.
+
+Terraform apply is protected by a GitHub Environment approval gate and deployment concurrency controls.
+
+Long-lived AWS access keys will not be stored as GitHub repository secrets.
+
+### Consequences
+
+Infrastructure deployment becomes repeatable, auditable, and tied directly to reviewed repository changes.
+
+Terraform state must move to a remote backend.
+
+GitHub OIDC and the AWS deployment roles become bootstrap dependencies.
+
+Because the current AWS identity cannot list IAM OIDC providers, IAM bootstrap may require an administrator or separately authorized identity.
+
+---
+
 ## Decision Summary
 
 The Phase 2 architecture is intentionally built around these properties:

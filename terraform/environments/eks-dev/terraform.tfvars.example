@@ -1,0 +1,36 @@
+aws_region   = "us-east-1"
+project_name = "aegis"
+environment  = "eks-dev"
+owner_name   = "Oryan"
+
+cluster_name = "aegis-eks-dev"
+
+vpc_cidr = "10.10.0.0/16"
+
+public_subnet_cidrs = [
+  "10.10.0.0/24",
+  "10.10.1.0/24",
+]
+
+eks_cluster_subnet_cidrs = [
+  "10.10.2.0/28",
+  "10.10.2.16/28",
+]
+
+private_eks_subnet_cidrs = [
+  "10.10.16.0/20",
+  "10.10.32.0/20",
+]
+
+private_data_subnet_cidrs = [
+  "10.10.64.0/24",
+  "10.10.65.0/24",
+]
+
+# true:
+#   one NAT Gateway for the development environment.
+#
+# false:
+#   one NAT Gateway per Availability Zone for
+#   stronger AZ independence.
+single_nat_gateway = true
