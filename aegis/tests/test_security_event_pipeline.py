@@ -1,3 +1,5 @@
+from aegis.detection.security_groups import detect_security_group_exposures
+from aegis.models.event import NetworkRule, NormalizedEvent
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -126,3 +128,72 @@ def test_pipeline_records_out_of_scope_event_telemetry():
     assert result.incidents == []
 
     assert repository.saved == []
+
+def test_pipeline_persists_multiple_incidents_from_single_event():
+    class MultiDetectionNormalizer:
+        def normalize(self, raw_event):
+            return NormalizedEvent(
+                event_id="event-multi-001",
+                timestamp=datetime.now(timezone.utc),
+                source="aws",
+                service="ec2",
+                action="AuthorizeSecurityGroupIngress",
+                region="us-east-1",
+                actor="test-user",
+                actor_type="IAMUser",
+                source_ip="203.0.113.10",
+                resource_type="security_group",
+                resource_id="sg-test",
+                network_rules=[
+                    NetworkRule(
+                        protocol="-1",
+                        from_port=None,
+                        to_port=None,
+                        cidr="0.0.0.0/0",
+                        ip_version=4,
+                    )
+                ],
+            )
+
+    repository = FakeRepository()
+
+    pipeline = SecurityEventPipeline(
+        collector=FakeCollector(),
+        normalizer=MultiDetectionNormalizer(),
+        detector=detect_security_group_exposures,
+        repository=repository,
+        scope_policy=AllowScope(),
+    )
+
+    result = pipeline.run(
+        event_name="AuthorizeSecurityGroupIngress",
+    )
+
+    assert result.collected_events == 1
+    assert result.normalized_events == 1
+    assert result.in_scope_events == 1
+
+    assert result.detections == 2
+    assert result.inserted == 2
+    assert result.duplicates == 0
+
+    assert len(result.incidents) == 2
+    assert len(repository.saved) == 2
+
+    rule_ids = {
+        incident.rule_id
+        for incident, inserted in result.incidents
+        if inserted
+    }
+
+    assert rule_ids == {
+        "AEGIS-AWS-SG-001",
+        "AEGIS-AWS-SG-002",
+    }
+
+    incident_ids = {
+        incident.incident_id
+        for incident, _ in result.incidents
+    }
+
+    assert len(incident_ids) == 2

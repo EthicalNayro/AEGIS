@@ -125,3 +125,49 @@ def test_detected_at_is_utc():
     )
 
     assert incident.detected_at.tzinfo == timezone.utc
+
+def test_different_detection_rules_generate_different_incident_ids():
+    event = make_event()
+
+    ssh_detection = make_detection()
+
+    rdp_detection = Detection(
+        rule_id="AEGIS-AWS-SG-002",
+        title="Public RDP Exposure",
+        severity=Severity.HIGH,
+        resource_type="security_group",
+        resource_id="sg-test123",
+        description=(
+            "A security group ingress rule exposes "
+            "RDP port 3389 to the public Internet."
+        ),
+        protocol="tcp",
+        from_port=3389,
+        to_port=3389,
+        cidr="0.0.0.0/0",
+    )
+
+    ssh_incident = build_incident(
+        event,
+        ssh_detection,
+    )
+
+    rdp_incident = build_incident(
+        event,
+        rdp_detection,
+    )
+
+    assert (
+        ssh_incident.incident_id
+        != rdp_incident.incident_id
+    )
+
+    assert (
+        ssh_incident.rule_id
+        == "AEGIS-AWS-SG-001"
+    )
+
+    assert (
+        rdp_incident.rule_id
+        == "AEGIS-AWS-SG-002"
+    )
