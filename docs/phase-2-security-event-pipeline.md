@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — core detection pipeline implemented and validated.**
+**Complete — implemented, runtime-validated, and merged into `main`.**
 
 Phase 2 turns the Phase 1 AWS foundation into a working cloud-security event processor. The current implementation continuously polls AWS CloudTrail, normalizes supported events, enforces an explicit monitoring scope, detects public SSH and RDP exposure on EC2 Security Groups, builds deterministic incidents, and persists them to a dedicated PostgreSQL database.
 
@@ -366,9 +366,9 @@ These are explicit phase boundaries rather than hidden future-state claims.
 
 ---
 
-## Next Engineering Steps
+## Future Engineering Direction
 
-The next Phase 2 work should extend reliability and security capability without collapsing component boundaries. Candidate work includes:
+Future engineering should build on the completed Phase 2 boundaries without collapsing component responsibilities. Candidate work includes:
 
 1. expand normalized resource support and detection rules;
 2. make resource scope policies composable across AWS resource types;

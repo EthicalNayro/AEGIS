@@ -11,11 +11,11 @@ The repository intentionally separates **implemented current state** from future
 | Phase | Scope | Status |
 |---|---|---|
 | Phase 1 | AWS Platform Foundation | ✅ Complete |
-| Phase 2 | Security Event Pipeline | 🚧 In progress — core pipeline implemented |
+| Phase 2 | Security Event Pipeline | ✅ Complete |
 | Phase 3 | Investigation / AI layer | ⏳ Future |
 | Phase 4 | Governed response / remediation | ⏳ Future |
 
-Phase 2 currently includes working CloudTrail ingestion, normalization, Security Group detection, explicit resource-scope enforcement, deterministic incident creation, PostgreSQL persistence, continuous polling, persistent checkpoint recovery, and signal-oriented worker observability.
+Phase 2 is complete and includes working CloudTrail ingestion, normalization, Security Group detection, explicit resource-scope enforcement, deterministic incident creation, PostgreSQL persistence, continuous polling, persistent checkpoint recovery, and signal-oriented worker observability.
 
 ---
 
@@ -141,7 +141,7 @@ The Django development port is not exposed publicly. Testing uses an SSH local f
 
 ---
 
-# Phase 2 — Security Event Pipeline 🚧
+# Phase 2 — Security Event Pipeline ✅
 
 Phase 2 introduces the first real AEGIS security-processing layer.
 
