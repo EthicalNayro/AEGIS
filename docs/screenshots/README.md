@@ -52,6 +52,10 @@ The images are evidence of specific validation milestones; they are not intended
 | 38 | `38-aegis-resource-scope-enforcement.png` | DENY/ALLOW resource-scope behavior |
 | 39 | `39-aegis-signal-oriented-observability-sanity.png` | Quiet normal polling plus visible worker health/liveness |
 | 39* | `39-aegis-resilient-security-worker-ci-success.mp4` | Recorded CI evidence for the resilient-worker milestone |
+| 40 | `40-aegis-phase2-final-ci-and-sync.png` | Phase 2 branch synchronization and green CI validation |
+| 41 | `41-aegis-pipeline-execution-telemetry.png` | Runtime telemetry across collection, normalization, scope, detection, and persistence |
+| 42 | `42-aegis-public-rdp-runtime-detection.png` | End-to-end runtime detection of Public RDP Exposure |
+| 43 | `43-aegis-public-rdp-persisted-incident.png` | SG-002 incident persisted once in PostgreSQL despite replay |
 
 `39*` is a legacy duplicate sequence number retained to avoid rewriting historical binary evidence. New evidence should continue with the next unused number rather than renaming old files.
 

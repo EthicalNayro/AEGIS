@@ -174,15 +174,23 @@ Resources that are not explicitly opted in are ignored. Unsupported resources an
 
 ### Current detection capability
 
-The first implemented rule detects public SSH exposure caused by Security Group ingress changes:
+The current Security Group detector contains two implemented rules:
 
 ```text
 AEGIS-AWS-SG-001
 Public SSH Exposure
 Severity: HIGH
+
+AEGIS-AWS-SG-002
+Public RDP Exposure
+Severity: HIGH
 ```
 
-The rule operates on normalized events rather than raw CloudTrail payloads.
+Both rules operate on normalized events rather than raw CloudTrail payloads.
+
+The detector supports one-to-many detection. A single normalized event can produce multiple findings when one ingress rule exposes multiple monitored services.
+
+Each finding receives its own deterministic incident identity because the detection rule ID and detection context are part of the incident fingerprint.
 
 ### Persistence boundary
 

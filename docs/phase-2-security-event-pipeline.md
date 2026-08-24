@@ -4,7 +4,7 @@
 
 **In progress — core detection pipeline implemented and validated.**
 
-Phase 2 turns the Phase 1 AWS foundation into a working cloud-security event processor. The current implementation continuously polls AWS CloudTrail, normalizes supported events, enforces an explicit monitoring scope, detects public SSH exposure on EC2 Security Groups, builds deterministic incidents, and persists them to a dedicated PostgreSQL database.
+Phase 2 turns the Phase 1 AWS foundation into a working cloud-security event processor. The current implementation continuously polls AWS CloudTrail, normalizes supported events, enforces an explicit monitoring scope, detects public SSH and RDP exposure on EC2 Security Groups, builds deterministic incidents, and persists them to a dedicated PostgreSQL database.
 
 AI investigation, Bedrock/AgentCore orchestration, automated remediation, and approval workflows are intentionally outside the current implementation.
 
@@ -32,7 +32,7 @@ Resource Scope Policy
       v
 Detection Engine
       |
-      | AEGIS-AWS-SG-001
+      | AEGIS-AWS-SG-001 / AEGIS-AWS-SG-002
       v
 Incident Builder
       |
@@ -106,15 +106,20 @@ This makes the current scope policy **fail closed**.
 
 ### Detection
 
-The first production-style rule is:
+The current production-style Security Group rules are:
 
-```text
-Rule ID:  AEGIS-AWS-SG-001
-Finding:  Public SSH Exposure
-Severity: HIGH
-```
+| Rule ID | Finding | Severity |
+|---|---|---|
+| `AEGIS-AWS-SG-001` | Public SSH Exposure | HIGH |
+| `AEGIS-AWS-SG-002` | Public RDP Exposure | HIGH |
 
-It detects Security Group ingress changes that expose SSH to the public Internet, including relevant IPv4/IPv6 and all-protocol cases.
+Both rules detect public exposure introduced through Security Group ingress changes and support relevant IPv4, IPv6, port-range, and all-protocol cases.
+
+Detection is intentionally one-to-many: a single normalized CloudTrail event may produce multiple findings.
+
+Each finding becomes a distinct incident because the rule ID and detection context are included in the deterministic incident fingerprint.
+
+`AEGIS-AWS-SG-002` was validated end-to-end using a detached temporary Security Group. The resulting `AuthorizeSecurityGroupIngress` event was collected from CloudTrail, passed explicit resource scope, detected as Public RDP Exposure, persisted once in PostgreSQL, and safely recognized as a duplicate during overlapping replay cycles.
 
 ### Incident construction and deduplication
 
@@ -323,6 +328,10 @@ Selected evidence in `docs/screenshots/`:
 | Worker checkpoint recovery | `36-aegis-worker-checkpoint-recovery.png` |
 | Resource scope enforcement | `38-aegis-resource-scope-enforcement.png` |
 | Signal-oriented observability sanity check | `39-aegis-signal-oriented-observability-sanity.png` |
+| Phase 2 branch synchronization and CI | `40-aegis-phase2-final-ci-and-sync.png` |
+| Pipeline execution telemetry | `41-aegis-pipeline-execution-telemetry.png` |
+| Public RDP runtime detection | `42-aegis-public-rdp-runtime-detection.png` |
+| Persisted Public RDP incident | `43-aegis-public-rdp-persisted-incident.png` |
 
 The repository also contains CI evidence for the resilient worker milestone.
 
@@ -348,7 +357,7 @@ Current limitations include:
 
 - CloudTrail `LookupEvents` polling is the active event transport; EventBridge/SQS ingestion is not active.
 - The current detection scope is focused on EC2 Security Group ingress changes.
-- The current concrete rule detects public SSH exposure.
+- The current concrete rules detect public SSH and public RDP exposure.
 - The continuous worker currently runs from the development environment.
 - Scope policy currently supports Security Groups through tag validation.
 - Incident investigation, AI agents, approval policy, and automated remediation are not implemented yet.

@@ -175,15 +175,26 @@ AEGISMonitoring=enabled
 
 A missing tag, unsupported resource, unresolved resource, or failed scope validation results in denial.
 
-## First detection rule
+## Current detection rules
+
+| Rule ID | Finding | Severity |
+|---|---|---|
+| `AEGIS-AWS-SG-001` | Public SSH Exposure | HIGH |
+| `AEGIS-AWS-SG-002` | Public RDP Exposure | HIGH |
+
+The Security Group detector evaluates normalized ingress rules and can emit multiple findings from the same CloudTrail event when a rule exposes more than one monitored service.
+
+`AEGIS-AWS-SG-002` was validated end-to-end using a detached temporary Security Group:
 
 ```text
-Rule ID:  AEGIS-AWS-SG-001
-Finding:  Public SSH Exposure
-Severity: HIGH
+AWS API activity
+    -> CloudTrail
+    -> normalization
+    -> resource scope
+    -> detection
+    -> deterministic incident construction
+    -> PostgreSQL persistence
 ```
-
-The rule detects public SSH exposure introduced through Security Group ingress changes.
 
 ## Incident persistence and deduplication
 
