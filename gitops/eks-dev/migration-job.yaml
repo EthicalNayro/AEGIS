@@ -1,0 +1,147 @@
+apiVersion: batch/v1
+kind: Job
+
+metadata:
+  name: aegis-status-page-migrate
+  namespace: aegis-system
+
+  labels:
+    app.kubernetes.io/name: status-page
+    app.kubernetes.io/component: migration
+    app.kubernetes.io/part-of: aegis
+
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: status-page
+        app.kubernetes.io/component: migration
+        app.kubernetes.io/part-of: aegis
+
+    spec:
+      restartPolicy: Never
+
+      serviceAccountName: aegis-status-page
+      automountServiceAccountToken: false
+
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+      initContainers:
+        - name: render-configuration
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:ef1a1404f9899dae6f2335ad7a6e6f18613f3ca46483ae8f725587965aba3ff1"
+
+          command:
+            - python
+            - /bootstrap/render-configuration.py
+
+          envFrom:
+            - configMapRef:
+                name: aegis-status-page-runtime
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+
+            - name: runtime-config
+              mountPath: /runtime
+
+            - name: django-secret
+              mountPath: /var/run/aegis-secret
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+      containers:
+        - name: migrate
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:ef1a1404f9899dae6f2335ad7a6e6f18613f3ca46483ae8f725587965aba3ff1"
+
+          command:
+            - python
+            - manage.py
+            - migrate
+            - --noinput
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /app/statuspage/statuspage/configuration.py
+              subPath: configuration.py
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: aegis-status-page-bootstrap
+
+        - name: django-secret
+          secret:
+            secretName: aegis-status-page-secret
+            defaultMode: 0400
+
+        - name: runtime-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

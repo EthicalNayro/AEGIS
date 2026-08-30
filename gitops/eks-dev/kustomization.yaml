@@ -5,6 +5,7 @@ namespace: aegis-system
 
 resources:
   - serviceaccount.yaml
+  - migration-job.yaml
   - service.yaml
   - deployment.yaml
   - pdb.yaml
