@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: aegis-status-page-rq
+  namespace: aegis-system
+
+spec:
+  minAvailable: 1
+
+  selector:
+    matchLabels:
+      app: aegis-status-page-rq

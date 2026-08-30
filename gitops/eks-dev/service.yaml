@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aegis-status-page
+  namespace: aegis-system
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: aegis-status-page
+
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

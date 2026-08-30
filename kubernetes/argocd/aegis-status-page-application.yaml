@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aegis-status-page
+  namespace: argocd
+
+spec:
+  project: aegis
+
+  source:
+    repoURL: https://github.com/EthicalNayro/AEGIS.git
+    targetRevision: phase-1-1/platform-modernization
+    path: gitops/eks-dev
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aegis-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+
+    syncOptions:
+      - CreateNamespace=false
+      - PruneLast=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true

@@ -1,0 +1,275 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegis-status-page
+  namespace: aegis-system
+  labels:
+    app: aegis-status-page
+    app.kubernetes.io/name: status-page
+    app.kubernetes.io/part-of: aegis
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: aegis-status-page
+
+  template:
+    metadata:
+      labels:
+        app: aegis-status-page
+        app.kubernetes.io/name: status-page
+        app.kubernetes.io/part-of: aegis
+
+    spec:
+      serviceAccountName: aegis-status-page
+
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+      topologySpreadConstraints:
+        - maxSkew: 1
+          minDomains: 2
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+
+          labelSelector:
+            matchLabels:
+              app: aegis-status-page
+
+          matchLabelKeys:
+            - pod-template-hash
+
+      initContainers:
+
+        # ------------------------------------------
+        # Render configuration.py from Secrets Manager
+        # ------------------------------------------
+
+        - name: render-configuration
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:ef1a1404f9899dae6f2335ad7a6e6f18613f3ca46483ae8f725587965aba3ff1"
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - /bootstrap/render-configuration.py
+
+          envFrom:
+            - configMapRef:
+                name: aegis-status-page-runtime
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+
+            - name: runtime-config
+              mountPath: /runtime
+
+            - name: django-secret
+              mountPath: /var/run/aegis-secret
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+
+        # ------------------------------------------
+        # Collect Django static files
+        # ------------------------------------------
+
+        - name: collect-static
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:ef1a1404f9899dae6f2335ad7a6e6f18613f3ca46483ae8f725587965aba3ff1"
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - manage.py
+            - collectstatic
+            - --noinput
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /app/statuspage/statuspage/configuration.py
+              subPath: configuration.py
+              readOnly: true
+
+            - name: static
+              mountPath: /app/statuspage/static
+
+            - name: tmp
+              mountPath: /tmp
+
+
+      containers:
+
+        # ------------------------------------------
+        # Django / Gunicorn
+        # ------------------------------------------
+
+        - name: gunicorn
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:ef1a1404f9899dae6f2335ad7a6e6f18613f3ca46483ae8f725587965aba3ff1"
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          ports:
+            - containerPort: 8000
+              name: gunicorn
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /app/statuspage/statuspage/configuration.py
+              subPath: configuration.py
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+
+        # ------------------------------------------
+        # Nginx
+        # ------------------------------------------
+
+        - name: nginx
+          image: nginxinc/nginx-unprivileged:1.27-alpine
+
+          ports:
+            - containerPort: 8080
+              name: http
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
+
+            - name: static
+              mountPath: /static
+              readOnly: true
+
+            - name: nginx-tmp
+              mountPath: /tmp
+
+
+      volumes:
+
+        - name: bootstrap
+          configMap:
+            name: aegis-status-page-bootstrap
+
+        - name: django-secret
+          secret:
+            secretName: aegis-status-page-secret
+            defaultMode: 0400
+
+        - name: runtime-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+
+        - name: static
+          emptyDir:
+            sizeLimit: 256Mi
+
+        - name: nginx-config
+          configMap:
+            name: aegis-status-page-nginx
+
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+
+        - name: nginx-tmp
+          emptyDir:
+            sizeLimit: 64Mi

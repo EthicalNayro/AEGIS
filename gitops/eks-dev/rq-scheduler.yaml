@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegis-status-page-scheduler
+  namespace: aegis-system
+  labels:
+    app: aegis-status-page-scheduler
+    app.kubernetes.io/name: status-page
+    app.kubernetes.io/component: rq-scheduler
+    app.kubernetes.io/part-of: aegis
+
+spec:
+  replicas: 1
+
+  # Prevent two schedulers from overlapping during an update.
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: aegis-status-page-scheduler
+
+  template:
+    metadata:
+      labels:
+        app: aegis-status-page-scheduler
+        app.kubernetes.io/name: status-page
+        app.kubernetes.io/component: rq-scheduler
+        app.kubernetes.io/part-of: aegis
+
+    spec:
+      serviceAccountName: aegis-status-page
+
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+      initContainers:
+        - name: render-configuration
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:28c1cca8e0af6b325e47e9dda35e0333a3da5d44a537b2a47a1cdbae7e986df9"
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - /bootstrap/render-configuration.py
+
+          envFrom:
+            - configMapRef:
+                name: aegis-status-page-runtime
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+
+            - name: runtime-config
+              mountPath: /runtime
+
+            - name: django-secret
+              mountPath: /var/run/aegis-secret
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+      containers:
+        - name: scheduler
+          image: "992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page@sha256:28c1cca8e0af6b325e47e9dda35e0333a3da5d44a537b2a47a1cdbae7e986df9"
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - python
+            - manage.py
+            - rqscheduler
+
+          env:
+            - name: HOME
+              value: /tmp
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /app/statuspage/statuspage/configuration.py
+              subPath: configuration.py
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: bootstrap
+          configMap:
+            name: aegis-status-page-bootstrap
+
+        - name: django-secret
+          secret:
+            secretName: aegis-status-page-secret
+            defaultMode: 0400
+
+        - name: runtime-config
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: aegis-demo
+  namespace: aegis-system
+
+  labels:
+    app.kubernetes.io/name: aegis-demo
+    app.kubernetes.io/part-of: aegis
+
+  annotations:
+    # Public-facing AWS Application Load Balancer.
+    alb.ingress.kubernetes.io/scheme: internet-facing
+
+    # ALB sends traffic directly to Pod IP addresses.
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # Stable and unique ALB name for this environment.
+    alb.ingress.kubernetes.io/load-balancer-name: aegis-eks-dev-alb
+
+    # Expose both HTTP and HTTPS.
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+
+    # Redirect all HTTP traffic to HTTPS.
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+
+    # Modern TLS policy.
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+
+    # Target Group health check.
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: "200"
+
+    # AWS resource identification.
+    alb.ingress.kubernetes.io/tags: Project=aegis,Environment=eks-dev,ManagedBy=kubernetes,Component=ingress
+
+spec:
+  ingressClassName: alb
+
+  rules:
+    - host: app.aegis-project.ddnsfree.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aegis-status-page
+                port:
+                  number: 8080
