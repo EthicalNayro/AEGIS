@@ -283,6 +283,41 @@ jobs:
 
       # GitOps hand-off:
       # CI changes Git only. It never talks to Kubernetes/EKS.
+      #
+      # Safely synchronize with the latest remote branch before
+      # mutating desired state. A stale rerun must never overwrite
+      # newer application changes.
+      - name: Synchronize GitOps branch safely
+        shell: bash
+        run: |
+          git fetch             origin             "$GITHUB_REF_NAME"
+
+          REMOTE_REF="origin/$GITHUB_REF_NAME"
+
+          CHANGED_FILES=$(
+            git diff               --name-only               "$GITHUB_SHA..$REMOTE_REF"
+          )
+
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Remote branch advanced since this workflow started:"
+            echo "$CHANGED_FILES"
+
+            UNSAFE_FILES=$(
+              echo "$CHANGED_FILES"               | grep -v '^gitops/eks-dev/kustomization.yaml$'               || true
+            )
+
+            if [ -n "$UNSAFE_FILES" ]; then
+              echo "Refusing stale GitOps deployment."
+              echo "Remote contains newer non-GitOps changes:"
+              echo "$UNSAFE_FILES"
+              exit 1
+            fi
+          fi
+
+          git checkout             -B "$GITHUB_REF_NAME"             "$REMOTE_REF"
+
+          echo "GitOps branch synchronized safely."
+
       - name: Update GitOps image digest
         shell: bash
         env:
