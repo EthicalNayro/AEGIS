@@ -1,0 +1,259 @@
+name: AEGIS Status-Page Secure CI
+
+on:
+  push:
+    branches:
+      - phase-1-1/platform-modernization
+    paths:
+      - "status-page/**"
+      - ".github/workflows/status-page-ci.yml"
+
+  pull_request:
+    branches:
+      - phase-1-1/platform-modernization
+    paths:
+      - "status-page/**"
+      - ".github/workflows/status-page-ci.yml"
+
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "992382545251"
+  ECR_REPOSITORY: aegis-eks-dev-status-page
+  ECR_REGISTRY: 992382545251.dkr.ecr.us-east-1.amazonaws.com
+  AWS_ROLE_ARN: arn:aws:iam::992382545251:role/aegis-eks-dev-github-ci
+
+jobs:
+
+  # =========================================================
+  # CI VALIDATION
+  # Runs for both Pull Requests and pushes.
+  # Has no AWS permissions.
+  # =========================================================
+
+  validate:
+    name: Validate & Build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate AEGIS plugin Python
+        run: |
+          python3 -m compileall \
+            status-page/statuspage/aegis_review
+
+      - name: Validate runtime configuration renderer
+        run: |
+          python3 -m py_compile \
+            kubernetes/status-page/render-configuration.py
+
+      - name: Build Status-Page container
+        run: |
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            -t aegis-status-page:ci \
+            status-page
+
+      # Visibility scan:
+      # HIGH and CRITICAL findings are shown in CI.
+      - name: Trivy vulnerability report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: aegis-status-page:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          scanners: vuln,secret
+          exit-code: "0"
+
+      # Security gate:
+      # A fixable CRITICAL vulnerability blocks delivery.
+      - name: Trivy CRITICAL security gate
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: aegis-status-page:ci
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          scanners: vuln,secret
+          exit-code: "1"
+
+
+  # =========================================================
+  # SECURE DELIVERY
+  #
+  # Runs only for trusted pushes/workflow_dispatch.
+  #
+  # GitHub gets temporary AWS credentials through OIDC.
+  # It has ECR permissions only and NO EKS permissions.
+  # =========================================================
+
+  publish:
+    name: Publish Immutable Image
+    runs-on: ubuntu-latest
+    needs: validate
+
+    if: github.event_name != 'pull_request'
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials using GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+          role-session-name: aegis-github-${{ github.run_id }}
+
+      - name: Verify AWS identity
+        run: |
+          aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password \
+            --region "$AWS_REGION" \
+          | docker login \
+              --username AWS \
+              --password-stdin "$ECR_REGISTRY"
+
+      - name: Define immutable image tag
+        id: image
+        shell: bash
+        run: |
+          IMAGE_TAG="git-${GITHUB_SHA:0:12}"
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+          echo "IMAGE_URI=$IMAGE_URI" >> "$GITHUB_ENV"
+
+          echo "tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+          echo "Image URI: $IMAGE_URI"
+
+      - name: Build immutable production image
+        run: |
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            -t "$IMAGE_URI" \
+            status-page
+
+      - name: Trivy production image gate
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_URI }}
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          scanners: vuln,secret
+          exit-code: "1"
+
+      - name: Push image to ECR
+        run: |
+          docker push "$IMAGE_URI"
+
+      - name: Resolve immutable ECR digest
+        id: digest
+        shell: bash
+        run: |
+          DIGEST=$(
+            aws ecr describe-images \
+              --repository-name "$ECR_REPOSITORY" \
+              --image-ids imageTag="$IMAGE_TAG" \
+              --region "$AWS_REGION" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          )
+
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid ECR digest: $DIGEST"
+            exit 1
+          fi
+
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Immutable digest: $DIGEST"
+
+      # GitOps hand-off:
+      # CI changes Git only. It never talks to Kubernetes/EKS.
+      - name: Update GitOps image digest
+        shell: bash
+        env:
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("gitops/eks-dev/kustomization.yaml")
+          text = path.read_text()
+
+          digest = os.environ["DIGEST"]
+
+          updated, count = re.subn(
+              r"(?m)^(\s*digest:\s*)sha256:[0-9a-f]{64}\s*$",
+              rf"\g<1>{digest}",
+              text,
+              count=1,
+          )
+
+          if count != 1:
+              raise SystemExit(
+                  f"Expected exactly one digest field, updated {count}"
+              )
+
+          path.write_text(updated)
+          PY
+
+          grep -A4 '^images:' \
+            gitops/eks-dev/kustomization.yaml
+
+      - name: Commit GitOps desired state
+        shell: bash
+        run: |
+          if git diff --quiet -- gitops/eks-dev/kustomization.yaml; then
+            echo "GitOps already references this digest."
+            exit 0
+          fi
+
+          git config \
+            user.name "github-actions[bot]"
+
+          git config \
+            user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            gitops/eks-dev/kustomization.yaml
+
+          git commit \
+            -m "chore(gitops): deploy ${IMAGE_TAG} [skip ci]"
+
+          git push \
+            origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Delivery summary
+        run: |
+          echo "======================================"
+          echo "AEGIS SECURE DELIVERY COMPLETE"
+          echo "======================================"
+          echo "Image tag:    $IMAGE_TAG"
+          echo "Image URI:    $IMAGE_URI"
+          echo "Image digest: ${{ steps.digest.outputs.digest }}"
+          echo
+          echo "GitHub Actions did NOT access EKS."
+          echo "Argo CD will reconcile Git -> EKS."
