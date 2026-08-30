@@ -161,7 +161,59 @@ jobs:
 
           echo "Image URI: $IMAGE_URI"
 
+      # Idempotent ECR delivery:
+      # Reuse an existing immutable image when this Git commit
+      # has already been published.
+      - name: Check for existing immutable ECR image
+        id: ecr
+        shell: bash
+        run: |
+          set +e
+
+          EXISTING_DIGEST=$(
+            aws ecr describe-images \
+              --repository-name "$ECR_REPOSITORY" \
+              --image-ids imageTag="$IMAGE_TAG" \
+              --region "$AWS_REGION" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text \
+              2>ecr-error.txt
+          )
+
+          STATUS=$?
+
+          set -e
+
+          if [ "$STATUS" -eq 0 ]; then
+            if [[ ! "$EXISTING_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Unexpected ECR digest: $EXISTING_DIGEST"
+              exit 1
+            fi
+
+            echo "Immutable image already exists."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "digest=$EXISTING_DIGEST" >> "$GITHUB_OUTPUT"
+
+          elif grep -q "ImageNotFoundException" ecr-error.txt; then
+            echo "Immutable image does not exist yet."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "digest=" >> "$GITHUB_OUTPUT"
+
+          else
+            echo "Unexpected ECR error:"
+            cat ecr-error.txt
+            exit "$STATUS"
+          fi
+
+          rm -f ecr-error.txt
+
+      - name: Pull existing immutable image
+        if: steps.ecr.outputs.exists == 'true'
+        run: |
+          docker pull "$IMAGE_URI"
+
       - name: Build immutable production image
+        if: steps.ecr.outputs.exists != 'true'
         run: |
           docker build \
             --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
@@ -178,22 +230,48 @@ jobs:
           scanners: vuln,secret
           exit-code: "1"
 
+      # Software Bill of Materials for the exact release image.
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_URI }}
+          format: cyclonedx
+          output: aegis-status-page-sbom.cdx.json
+          exit-code: "0"
+
+      - name: Upload SBOM evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aegis-status-page-sbom-${{ github.sha }}
+          path: aegis-status-page-sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Push image to ECR
+        if: steps.ecr.outputs.exists != 'true'
         run: |
           docker push "$IMAGE_URI"
 
       - name: Resolve immutable ECR digest
         id: digest
         shell: bash
+        env:
+          IMAGE_EXISTS: ${{ steps.ecr.outputs.exists }}
+          EXISTING_DIGEST: ${{ steps.ecr.outputs.digest }}
         run: |
-          DIGEST=$(
-            aws ecr describe-images \
-              --repository-name "$ECR_REPOSITORY" \
-              --image-ids imageTag="$IMAGE_TAG" \
-              --region "$AWS_REGION" \
-              --query 'imageDetails[0].imageDigest' \
-              --output text
-          )
+          if [ "$IMAGE_EXISTS" = "true" ]; then
+            DIGEST="$EXISTING_DIGEST"
+            echo "Reusing existing immutable digest: $DIGEST"
+          else
+            DIGEST=$(
+              aws ecr describe-images \
+                --repository-name "$ECR_REPOSITORY" \
+                --image-ids imageTag="$IMAGE_TAG" \
+                --region "$AWS_REGION" \
+                --query 'imageDetails[0].imageDigest' \
+                --output text
+            )
+          fi
 
           if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             echo "Invalid ECR digest: $DIGEST"
