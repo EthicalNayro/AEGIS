@@ -7,6 +7,7 @@ on:
     paths:
       - "status-page/**"
       - ".github/workflows/status-page-ci.yml"
+      - "gitops/eks-dev/render-configuration.py"
 
   pull_request:
     branches:
@@ -14,6 +15,7 @@ on:
     paths:
       - "status-page/**"
       - ".github/workflows/status-page-ci.yml"
+      - "gitops/eks-dev/render-configuration.py"
 
   workflow_dispatch:
 
@@ -23,6 +25,10 @@ env:
   ECR_REPOSITORY: aegis-eks-dev-status-page
   ECR_REGISTRY: 992382545251.dkr.ecr.us-east-1.amazonaws.com
   AWS_ROLE_ARN: arn:aws:iam::992382545251:role/aegis-eks-dev-github-ci
+
+concurrency:
+  group: status-page-ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
 
@@ -119,48 +125,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-
-      - name: Inspect GitHub OIDC claims safely
-        shell: bash
-        run: |
-          python3 <<'PY'
-          import base64
-          import json
-          import os
-          import urllib.request
-
-          url = (
-              os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
-              + "&audience=sts.amazonaws.com"
-          )
-
-          request = urllib.request.Request(
-              url,
-              headers={
-                  "Authorization":
-                      "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
-              },
-          )
-
-          with urllib.request.urlopen(request) as response:
-              token = json.load(response)["value"]
-
-          payload = token.split(".")[1]
-          payload += "=" * (-len(payload) % 4)
-
-          claims = json.loads(
-              base64.urlsafe_b64decode(payload)
-          )
-
-          for key in (
-              "aud",
-              "sub",
-              "repository",
-              "ref",
-              "job_workflow_ref",
-          ):
-              print(f"{key}={claims.get(key)}")
-          PY
 
       - name: Configure AWS credentials using GitHub OIDC
         uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
