@@ -1,0 +1,75 @@
+{% extends 'aegis_review/base.html' %}
+
+{% block aegis_title %}AEGIS Incident Review{% endblock %}
+
+{% block aegis_head %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-aegis-review-form]').forEach((form) => {
+      form.addEventListener('submit', () => {
+        form.querySelectorAll('button[type="submit"]').forEach((button) => { button.disabled = true; });
+        document.getElementById('review-submitting')?.removeAttribute('hidden');
+      });
+    });
+  });
+</script>
+{% endblock %}
+
+{% block aegis_content %}
+  {% if error_message %}
+    <section class="aegis-panel aegis-error" role="alert"><h3>Finding unavailable</h3><p>{{ error_message }}</p><a class="aegis-open" href="{% url 'plugins:aegis_review:findings' %}">Return to command center</a></section>
+  {% else %}
+    <a class="aegis-back" href="{% url 'plugins:aegis_review:findings' %}">← Back to Incidents</a>
+
+    {% if messages %}{% for message in messages %}<div class="aegis-message" role="status">{{ message }}</div>{% endfor %}{% endif %}
+
+    <header class="aegis-incident-heading">
+      <div><h1>Incident Review</h1><code>{{ finding.incident_id }}</code></div>
+      <span class="aegis-badge {% if finding.review_status == 'PENDING_REVIEW' %}aegis-pending{% else %}aegis-reviewed{% endif %}">{% if finding.review_status == 'PENDING_REVIEW' %}Pending analyst review{% else %}Human review completed{% endif %}</span>
+    </header>
+
+    <section class="aegis-summary-grid" aria-label="Incident intelligence summary">
+      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon" aria-hidden="true">◉</span><dl><dt>AI Classification</dt><dd style="color:var(--aegis-cyan)">{{ finding.classification }}</dd></dl></article>
+      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon" style="color:var(--aegis-red);background:rgba(127,29,29,.22)" aria-hidden="true">!</span><dl><dt>Severity</dt><dd><span class="aegis-badge {% if finding.severity == 'CRITICAL' %}aegis-critical{% elif finding.severity == 'HIGH' %}aegis-high{% elif finding.severity == 'MEDIUM' %}aegis-medium{% else %}aegis-low{% endif %}">{{ finding.severity }}</span></dd></dl></article>
+      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon" aria-hidden="true">↗</span><dl><dt>AI Confidence</dt><dd>{% if finding.confidence_percent is not None %}{{ finding.confidence_percent }}%{% else %}N/A{% endif %}</dd>{% if finding.confidence_percent is not None %}<div class="aegis-confidence-track" style="margin-top:.55rem"><div class="aegis-confidence-bar" style="--confidence:{{ finding.confidence_percent }}%"></div></div>{% endif %}</dl></article>
+    </section>
+
+    <section class="aegis-analysis-grid">
+      <article class="aegis-panel aegis-detail-card">
+        <header class="aegis-detail-head"><span aria-hidden="true">◉</span><h2>AI Assessment</h2></header>
+        <dl class="aegis-detail-list">
+          <div class="aegis-detail-row"><dt>Reasoning summary</dt><dd>{{ finding.reason }}</dd></div>
+          <div class="aegis-detail-row"><dt>Recommended action</dt><dd>{{ finding.recommended_action }}</dd></div>
+          <div class="aegis-detail-row"><dt>Model identifier</dt><dd><code>{{ finding.bedrock_model }}</code></dd></div>
+        </dl>
+      </article>
+
+      <article class="aegis-panel aegis-detail-card">
+        <header class="aegis-detail-head"><span aria-hidden="true">♢</span><h2>WAF Evidence</h2></header>
+        <dl class="aegis-detail-list">
+          <div class="aegis-detail-row"><dt>Action</dt><dd><span class="aegis-badge aegis-critical">{{ finding.waf_action }}</span></dd></div>
+          <div class="aegis-detail-row"><dt>Matched rule</dt><dd><code>{{ finding.matched_rule }}</code></dd></div>
+          <div class="aegis-detail-row"><dt>Request</dt><dd><code>{{ finding.http_method }} {{ finding.uri }}</code></dd></div>
+          <div class="aegis-detail-row"><dt>Country</dt><dd>{{ finding.country }}</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="aegis-panel aegis-review-panel" aria-labelledby="human-review-title">
+      <header class="aegis-review-head"><div><h2 id="human-review-title">Human Analyst Review</h2><p>This is a one-time, conditional decision. A completed review cannot be overwritten by another analyst.</p></div><span class="aegis-badge {% if finding.review_status == 'PENDING_REVIEW' %}aegis-pending{% else %}aegis-reviewed{% endif %}">{% if finding.review_status == 'PENDING_REVIEW' %}Action required{% else %}Locked after review{% endif %}</span></header>
+
+      {% if finding.review_status == 'PENDING_REVIEW' %}
+        <form method="post" action="{% url 'plugins:aegis_review:review_finding' finding.incident_id %}" data-aegis-review-form>
+          {% csrf_token %}
+          <div class="aegis-review-grid">
+            <label><span class="aegis-label">Analyst note <small>(optional)</small></span><textarea class="aegis-field" name="note" rows="3" placeholder="Add evidence or observations about this incident"></textarea></label>
+            <label><span class="aegis-label">Corrected classification <small>(if incorrect)</small></span><select class="aegis-field" name="correct_classification"><option value="">Select corrected classification</option><option value="TRUE_POSITIVE">TRUE_POSITIVE</option><option value="FALSE_POSITIVE">FALSE_POSITIVE</option><option value="UNCERTAIN">UNCERTAIN</option></select></label>
+          </div>
+          <div class="aegis-review-actions"><span id="review-submitting" hidden>Recording decision…</span><button class="aegis-verdict correct" type="submit" name="verdict" value="CORRECT">✓ AI IS CORRECT</button><button class="aegis-verdict incorrect" type="submit" name="verdict" value="INCORRECT">✕ AI IS INCORRECT</button></div>
+        </form>
+      {% else %}
+        <div class="aegis-reviewed-box"><h3>Review recorded and protected from overwrite</h3><dl><div><dt>Human verdict</dt><dd>{{ finding.human_verdict }}</dd></div><div><dt>Reviewed at</dt><dd>{{ finding.reviewed_at }}</dd></div>{% if finding.human_classification %}<div><dt>Correct classification</dt><dd>{{ finding.human_classification }}</dd></div>{% endif %}{% if finding.analyst_note %}<div><dt>Analyst note</dt><dd>{{ finding.analyst_note }}</dd></div>{% endif %}</dl></div>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

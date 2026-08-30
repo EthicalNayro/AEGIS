@@ -1,0 +1,68 @@
+{% extends 'aegis_review/base.html' %}
+
+{% block aegis_title %}AEGIS Security Console{% endblock %}
+
+{% block aegis_content %}
+  <section class="aegis-page-heading" aria-labelledby="command-center-title">
+    <div class="aegis-page-heading-row">
+      <div>
+        <p class="aegis-eyebrow">AEGIS / Analyst Operations</p>
+        <h1 id="command-center-title">Security findings command center</h1>
+        <p>Triage Amazon WAF telemetry and validate Bedrock decisions before feedback is committed to the AEGIS quality dataset.</p>
+      </div>
+      <span class="aegis-badge aegis-reviewed">Analyst access active</span>
+    </div>
+  </section>
+
+  {% if error_message %}
+    <section class="aegis-panel aegis-error" role="alert">
+      <h3>Security queue temporarily unavailable</h3>
+      <p>{{ error_message }}</p>
+      <a class="aegis-open" href="{% url 'plugins:aegis_review:findings' %}">Retry connection</a>
+    </section>
+  {% else %}
+    <section class="aegis-kpi-grid" aria-label="Security finding metrics">
+      <article class="aegis-panel aegis-kpi"><span class="aegis-kpi-icon" aria-hidden="true">⇩</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Ingested findings</span><strong class="aegis-kpi-value">{{ total_count }}</strong><span class="aegis-kpi-note">Current review dataset</span></div></article>
+      <article class="aegis-panel aegis-kpi"><span class="aegis-kpi-icon" aria-hidden="true">◎</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Awaiting analyst</span><strong class="aegis-kpi-value">{{ pending_count }}</strong><span class="aegis-kpi-note">Require human decision</span></div></article>
+      <article class="aegis-panel aegis-kpi is-critical"><span class="aegis-kpi-icon" aria-hidden="true">!</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Critical exposure</span><strong class="aegis-kpi-value">{{ critical_count }}</strong><span class="aegis-kpi-note">Critical severity signals</span></div></article>
+      <article class="aegis-panel aegis-kpi is-high"><span class="aegis-kpi-icon" aria-hidden="true">↗</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">High priority</span><strong class="aegis-kpi-value">{{ high_count }}</strong><span class="aegis-kpi-note">High severity signals</span></div></article>
+    </section>
+
+    <section id="queue" class="aegis-panel aegis-queue" aria-labelledby="queue-title">
+      <header class="aegis-queue-head">
+        <div><p class="aegis-eyebrow">Triage queue</p><h2 id="queue-title">AI-assisted security review</h2><p>{{ findings|length }} matching finding{{ findings|length|pluralize }} · newest events first</p></div>
+        <a class="aegis-clear" href="{% url 'plugins:aegis_review:findings' %}">Clear filters</a>
+      </header>
+
+      <form method="get" class="aegis-filter-grid" aria-label="Filter security findings">
+        <label><span class="sr-only">Search findings</span><input class="aegis-field" name="q" value="{{ search_query }}" placeholder="Search incident, rule, attack, URI or country"></label>
+        <label><span class="sr-only">Severity</span><select class="aegis-field" name="severity"><option value="">All severities</option><option value="CRITICAL" {% if selected_severity == 'CRITICAL' %}selected{% endif %}>Critical</option><option value="HIGH" {% if selected_severity == 'HIGH' %}selected{% endif %}>High</option><option value="MEDIUM" {% if selected_severity == 'MEDIUM' %}selected{% endif %}>Medium</option><option value="LOW" {% if selected_severity == 'LOW' %}selected{% endif %}>Low</option></select></label>
+        <label><span class="sr-only">Review state</span><select class="aegis-field" name="status"><option value="">All decisions</option><option value="PENDING_REVIEW" {% if selected_status == 'PENDING_REVIEW' %}selected{% endif %}>Pending review</option><option value="REVIEWED" {% if selected_status == 'REVIEWED' %}selected{% endif %}>Reviewed</option></select></label>
+        <button class="aegis-filter-button" type="submit">Apply filters</button>
+      </form>
+
+      {% if findings %}
+        <div class="aegis-table-wrap">
+          <table class="aegis-table" aria-label="AEGIS security findings">
+            <thead><tr><th>Incident ID</th><th>AI decision</th><th>Severity</th><th>Confidence</th><th>Status</th><th>Reviewed</th><th>Actions</th></tr></thead>
+            <tbody>
+              {% for finding in findings %}
+                <tr>
+                  <td><span class="aegis-incident-id">{{ finding.incident_id|truncatechars:22 }}</span><span class="aegis-secondary">{{ finding.event_time }}</span></td>
+                  <td><span class="aegis-decision">{{ finding.classification }}</span><span class="aegis-secondary">{{ finding.attack_type }}</span></td>
+                  <td><span class="aegis-badge {% if finding.severity == 'CRITICAL' %}aegis-critical{% elif finding.severity == 'HIGH' %}aegis-high{% elif finding.severity == 'MEDIUM' %}aegis-medium{% else %}aegis-low{% endif %}">{{ finding.severity }}</span></td>
+                  <td>{% if finding.confidence_percent is not None %}<div class="aegis-confidence"><strong>{{ finding.confidence_percent }}%</strong><div class="aegis-confidence-track"><div class="aegis-confidence-bar" style="--confidence:{{ finding.confidence_percent }}%"></div></div></div>{% else %}<span class="aegis-secondary">N/A</span>{% endif %}</td>
+                  <td><span class="aegis-badge {% if finding.review_status == 'PENDING_REVIEW' %}aegis-pending{% else %}aegis-reviewed{% endif %}">{% if finding.review_status == 'PENDING_REVIEW' %}Pending{% else %}Reviewed{% endif %}</span></td>
+                  <td><span class="aegis-secondary">{% if finding.reviewed_at %}{{ finding.reviewed_at|truncatechars:17 }}{% else %}—{% endif %}</span></td>
+                  <td><a class="aegis-open" href="{% url 'plugins:aegis_review:finding_detail' finding.incident_id %}">Open case</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="aegis-empty"><h3>No findings match this view</h3><p>New WAF events will appear after AEGIS completes analysis. Adjust the filters to inspect the full queue.</p></div>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

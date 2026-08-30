@@ -1,0 +1,69 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{% block aegis_title %}AEGIS Security{% endblock %}{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{% static 'aegis_review/aegis.css' %}?v=1.1.0">
+  {% block aegis_head %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+<div class="aegis-app">
+  <a class="aegis-skip-link" href="#aegis-main">Skip to security workspace</a>
+
+  <header class="aegis-topbar">
+    <a class="aegis-brand" href="{% url 'plugins:aegis_review:findings' %}" aria-label="AEGIS command center">
+      <span class="aegis-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 28" fill="none"><path d="M12 1.5 22 5v8.1c0 6.5-4.4 11.3-10 13.4C6.4 24.4 2 19.6 2 13.1V5l10-3.5Z" stroke="currentColor" stroke-width="1.6"/><path d="m7.8 18.5 4.1-10 4.3 10M9.3 15h5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span>AEGIS</span>
+    </a>
+
+    <nav class="aegis-topnav" aria-label="Primary security navigation">
+      <a href="{% url 'dashboard' %}"><span class="aegis-nav-icon">▣</span>Overview</a>
+      <a class="is-active" href="{% url 'plugins:aegis_review:findings' %}"><span class="aegis-nav-icon">⬡</span>Incidents</a>
+      <a href="{% url 'api-root' %}"><span class="aegis-nav-icon">⌁</span>API</a>
+      <a href="{% url 'users:preferences' %}"><span class="aegis-nav-icon">⚙</span>Settings</a>
+    </nav>
+
+    <div class="aegis-top-actions">
+      <span class="aegis-health"><i></i>System Operational</span>
+      <a class="aegis-user" href="{% url 'users:profile' %}" aria-label="Open analyst profile">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 21c.8-4 3.3-6 7.5-6s6.7 2 7.5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>{{ request.user.username }}</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="aegis-layout">
+    <aside class="aegis-sidebar">
+      <p class="aegis-sidebar-label">Analyst workspace</p>
+      <nav aria-label="AEGIS workspace">
+        <a class="is-active" href="{% url 'plugins:aegis_review:findings' %}"><span>▦</span>Command Center</a>
+        <a href="{% url 'plugins:aegis_review:findings' %}?status=PENDING_REVIEW"><span>◫</span>Review Queue</a>
+        <a href="{% url 'plugins:aegis_review:findings' %}?status=REVIEWED"><span>✓</span>Reviewed Cases</a>
+        <a href="{% url 'plugins:aegis_review:findings' %}?severity=CRITICAL"><span>⌖</span>Critical Exposure</a>
+      </nav>
+
+      <div class="aegis-sidebar-section">
+        <p class="aegis-sidebar-label">Platform</p>
+        <nav>
+          <a href="{% url 'dashboard' %}"><span>◈</span>Status-Page</a>
+          {% if request.user.is_staff %}<a href="{% url 'admin:index' %}"><span>⚙</span>Administration</a>{% endif %}
+        </nav>
+      </div>
+
+      <div class="aegis-sidebar-footer">
+        <div><span class="aegis-live-dot"></span><strong>AEGIS online</strong></div>
+        <small>Human review service</small>
+        <a href="{% url 'logout' %}">Sign out</a>
+      </div>
+    </aside>
+
+    <main id="aegis-main" class="aegis-main">
+      {% block aegis_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

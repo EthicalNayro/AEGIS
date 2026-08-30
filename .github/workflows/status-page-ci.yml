@@ -43,6 +43,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: Verify required build inputs
+        run: |
+          test -f status-page/Dockerfile
+          test -f status-page/statuspage/manage.py
+          test -f status-page/local_requirements.txt
+          test -f gitops/eks-dev/render-configuration.py
+
+          echo "All required CI build inputs are present."
+
       - name: Validate AEGIS plugin Python
         run: |
           python3 -m compileall \
@@ -51,7 +60,7 @@ jobs:
       - name: Validate runtime configuration renderer
         run: |
           python3 -m py_compile \
-            kubernetes/status-page/render-configuration.py
+            gitops/eks-dev/render-configuration.py
 
       - name: Build Status-Page container
         run: |
