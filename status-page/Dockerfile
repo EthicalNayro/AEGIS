@@ -1,15 +1,19 @@
-FROM python:3.12-slim-bookworm@sha256:0f5b26b9518d002b6173fd61daad821fa340635ebfec5bba471013f9ca114579
+ARG PYTHON_BASE=python:3.12-slim-bookworm@sha256:0f5b26b9518d002b6173fd61daad821fa340635ebfec5bba471013f9ca114579
 
-LABEL org.opencontainers.image.title="AEGIS Status-Page"
-LABEL org.opencontainers.image.version="v2.5.1-aegis-1"
-LABEL aegis.status-page.upstream-version="v2.5.1"
-LABEL aegis.status-page.upstream-commit="93bdc1eb606809d4ed32648043130889a4a7e45a"
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+# ============================================================
+# BUILD STAGE
+#
+# Compilers and development headers exist only here.
+# The final runtime image never inherits this stage.
+# ============================================================
+FROM ${PYTHON_BASE} AS builder
 
-# Status-Page native build/runtime dependencies.
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:${PATH}"
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
@@ -21,21 +25,49 @@ RUN apt-get update \
         zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /build
 
-# Install Python dependencies before copying application
-# source to maximize Docker layer reuse.
 COPY requirements.txt local_requirements.txt ./
 
-RUN python -m pip install --upgrade pip wheel \
+RUN python -m venv "$VIRTUAL_ENV" \
+    && python -m pip install --upgrade pip wheel \
     && python -m pip install \
         -r requirements.txt \
         -r local_requirements.txt
 
-# Copy pinned Status-Page source plus AEGIS plugin.
-COPY . /app
 
-# Build documentation bundled by the upstream project.
+# ============================================================
+# RUNTIME STAGE
+#
+# Contains only what AEGIS Status-Page needs at runtime.
+# No compiler toolchain or development headers are retained.
+# ============================================================
+FROM ${PYTHON_BASE} AS runtime
+
+LABEL org.opencontainers.image.title="AEGIS Status-Page"
+LABEL org.opencontainers.image.version="v2.5.1-aegis-1"
+LABEL aegis.status-page.upstream-version="v2.5.1"
+LABEL aegis.status-page.upstream-commit="93bdc1eb606809d4ed32648043130889a4a7e45a"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:${PATH}"
+
+# Runtime library required by psycopg2/PostgreSQL.
+# Development headers remain confined to the builder stage.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
+
+WORKDIR /app
+
+# Pinned Status-Page source plus native AEGIS plugin.
+COPY . /app
 
 # Dedicated non-root runtime identity.
 RUN groupadd --gid 1000 status-page \
