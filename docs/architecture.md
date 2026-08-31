@@ -212,14 +212,56 @@ The CI workflow refreshes the remote branch before modifying desired state. If a
 
 ## Observability
 
-CloudWatch dashboards combine application-edge and security signals:
+AEGIS uses two complementary observability planes rather than forcing every signal into one backend.
 
-- WAF allowed/blocked traffic;
-- WAF rate limiting;
+### Kubernetes and workload telemetry
+
+The GitOps-managed `aegis-observability` application deploys `kube-prometheus-stack` into the isolated `monitoring` namespace. It includes Prometheus, Grafana, kube-state-metrics, and node metrics while keeping the observability GitOps project constrained to that namespace.
+
+The custom **AEGIS Platform Health** dashboard is provisioned from:
+
+```text
+kubernetes/observability/manifests/aegis-platform-health-dashboard.yaml
+```
+
+It visualizes:
+
+- Status-Page and analyzer replicas;
+- RQ worker and scheduler availability;
+- ready Kubernetes nodes;
+- container restarts;
+- Status-Page CPU and memory;
+- deployment availability;
+- Pod density and node-capacity pressure.
+
+The standard Kubernetes dashboards are filtered to `aegis-system` so an analyst can move from the AEGIS summary into namespace, workload, Pod, and node detail.
+
+### Secured Grafana integration
+
+Grafana is not exposed through a public ingress and remains a `ClusterIP` service. Anonymous access is disabled.
+
+The AEGIS plugin provides a same-origin gateway under `/plugins/aegis/grafana/`. Nginx first performs an internal Django authorization request; only an authenticated, active staff user receives an isolated Grafana identity. Grafana auto-assigns that identity the `Viewer` role, so embedding does not grant edit or administrative access.
+
+The analyst observability page adds accessible dashboard switching, loading feedback, a full-view option, and a responsive embedded workspace without bypassing Status-Page authentication.
+
+### AWS edge and security telemetry
+
+CloudWatch remains the source for signals that are native to the AWS edge and event pipeline:
+
+- WAF allowed/blocked traffic and rate limiting;
 - ALB request count, 4XX/5XX, average and p95 response time;
+- security-event pipeline alarms;
 - AI quality metrics from human-reviewed findings.
 
-A CloudWatch alarm on blocked requests drives the event pipeline through EventBridge and SQS.
+A CloudWatch alarm on blocked requests drives the EventBridge and SQS security-analysis path.
+
+---
+
+## DNS Automation Boundary
+
+ExternalDNS and the Dynu webhook provider are represented in GitOps with namespace-scoped RBAC, an exact AEGIS ingress label, an exact hostname filter, CNAME-only management, an allowed ELB target suffix, and an `upsert-only` policy.
+
+The deployment remains intentionally configured with `--dry-run`. It proves discovery, provider integration, and fail-closed validation without claiming that automated DNS writes are active. The Dynu API credential remains a Kubernetes Secret and is never stored in Git.
 
 ---
 

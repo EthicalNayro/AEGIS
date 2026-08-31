@@ -57,6 +57,19 @@ The images are evidence of specific validation milestones; they are not intended
 | 42 | `42-aegis-public-rdp-runtime-detection.png` | End-to-end runtime detection of Public RDP Exposure |
 | 43 | `43-aegis-public-rdp-persisted-incident.png` | SG-002 incident persisted once in PostgreSQL despite replay |
 
+## Final EKS / GitOps Showcase
+
+Later final-project evidence continues the global sequence used in [`../evidence.md`](../evidence.md). Some validation captures remain outside this directory; the index distinguishes named evidence from files that are actually committed.
+
+| # | File | What it validates |
+|---|---|---|
+| 83–89 | See [`../evidence.md`](../evidence.md) | Argo CD, immutable delivery, migration, SBOM, runtime digest, and multi-AZ acceptance |
+| 90 | `90-aegis-observability-gitops-synced.png` | Prometheus/Grafana GitOps health |
+| 91 | `91-aegis-grafana-kubernetes-observability.png` | Kubernetes observability for `aegis-system` |
+| 92 | `92-aegis-platform-health-dashboard.png` | custom AEGIS Platform Health dashboard |
+| 93 | `93-aegis-external-dns-dynu-dry-run.png` | scoped ExternalDNS/Dynu record discovery in dry-run mode |
+| 94 | [`94-aegis-security-command-center.png`](94-aegis-security-command-center.png) | deployed AEGIS analyst command center |
+
 `39*` is a legacy duplicate sequence number retained to avoid rewriting historical binary evidence. New evidence should continue with the next unused number rather than renaming old files.
 
 ## Evidence Guidelines
