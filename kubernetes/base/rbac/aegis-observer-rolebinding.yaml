@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aegis-observer
+  namespace: aegis-system
+  labels:
+    app.kubernetes.io/part-of: aegis
+subjects:
+  - kind: ServiceAccount
+    name: aegis-observer
+    namespace: aegis-system
+
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: aegis-observer

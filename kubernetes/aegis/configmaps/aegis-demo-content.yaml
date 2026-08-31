@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegis-demo-content
+  namespace: aegis-system
+  labels:
+    app.kubernetes.io/name: aegis-demo
+    app.kubernetes.io/part-of: aegis
+data:
+  index.html: |
+    <!doctype html>
+    <html>
+      <head>
+        <title>AEGIS</title>
+      </head>
+      <body>
+        <h1>AEGIS is healthy</h1>
+      </body>
+    </html>

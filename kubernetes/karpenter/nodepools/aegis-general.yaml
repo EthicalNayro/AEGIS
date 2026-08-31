@@ -1,0 +1,77 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+
+metadata:
+  name: aegis-general
+
+spec:
+  template:
+    metadata:
+      labels:
+        aegis.io/capacity: dynamic
+
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: aegis-general
+
+      requirements:
+        # Same architecture as our current workloads.
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+            - amd64
+
+        - key: kubernetes.io/os
+          operator: In
+          values:
+            - linux
+
+        # First Karpenter demo uses predictable
+        # On-Demand capacity.
+        # We will add Spot after validating the system.
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+            - spot
+            - on-demand
+
+        # Give Karpenter several EC2 families instead
+        # of hard-coding one exact instance type.
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values:
+            - t
+            - m
+            - c
+
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values:
+            - "2"
+
+        # Prevent Karpenter from choosing unnecessarily
+        # large instances for the dev environment.
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values:
+            - medium
+            - large
+
+      # Periodically replace old nodes.
+      expireAfter: 720h
+
+  # Safety guardrail:
+  # Karpenter dynamic capacity cannot grow indefinitely.
+  limits:
+    cpu: "8"
+
+  disruption:
+    # Remove or replace nodes that are no longer
+    # economically useful after workloads shrink.
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
+
+    budgets:
+      - nodes: "1"

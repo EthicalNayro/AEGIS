@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegis-security-analyzer-config
+  namespace: aegis-system
+data:
+  AWS_REGION: us-east-1
+  AEGIS_SECURITY_EVENTS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/992382545251/aegis-eks-dev-security-events
+  AEGIS_WAF_LOG_GROUP: aws-waf-logs-aegis-eks-dev
+  AEGIS_BEDROCK_MODEL_ID: amazon.nova-pro-v1:0
+  AEGIS_FINDINGS_TABLE: aegis-eks-dev-security-findings

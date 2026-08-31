@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegis-security-analyzer
+  namespace: aegis-system
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  selector:
+    matchLabels:
+      app: aegis-security-analyzer
+
+  template:
+    metadata:
+      labels:
+        app: aegis-security-analyzer
+
+    spec:
+      serviceAccountName: aegis-security-analyzer
+      terminationGracePeriodSeconds: 30
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: analyzer
+          image: public.ecr.aws/lambda/python:3.12
+
+          command:
+            - python3
+
+          args:
+            - /app/analyzer.py
+
+          envFrom:
+            - configMapRef:
+                name: aegis-security-analyzer-config
+
+          env:
+            - name: HOME
+              value: /tmp
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+
+          livenessProbe:
+            exec:
+              command:
+                - python3
+                - -c
+                - |
+                  import os,time
+                  p="/tmp/aegis/heartbeat"
+                  assert os.path.exists(p)
+                  assert time.time()-os.path.getmtime(p) < 120
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - python3
+                - -c
+                - |
+                  import os,time
+                  p="/tmp/aegis/heartbeat"
+                  assert os.path.exists(p)
+                  assert time.time()-os.path.getmtime(p) < 60
+            initialDelaySeconds: 25
+            periodSeconds: 20
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: analyzer-code
+              mountPath: /app/analyzer.py
+              subPath: analyzer.py
+              readOnly: true
+
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: analyzer-code
+          configMap:
+            name: aegis-security-analyzer-code
+
+        - name: tmp
+          emptyDir: {}

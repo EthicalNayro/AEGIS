@@ -1,0 +1,42 @@
+replicas: 2
+
+serviceAccount:
+  create: true
+  name: karpenter
+
+# Keep the Karpenter controller on the permanent
+# EKS Managed Node Group, not on nodes managed by Karpenter.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: eks.amazonaws.com/nodegroup
+              operator: In
+              values:
+                - aegis-eks-dev-general
+            - key: karpenter.sh/nodepool
+              operator: DoesNotExist
+
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+
+controller:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+settings:
+  clusterName: aegis-eks-dev
+  interruptionQueue: Karpenter-aegis-eks-dev
+  eksControlPlane: true

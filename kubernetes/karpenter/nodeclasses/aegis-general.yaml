@@ -1,0 +1,35 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+
+metadata:
+  name: aegis-general
+
+spec:
+  # IAM role created by Terraform for
+  # dynamically provisioned Karpenter nodes.
+  role: aegis-eks-dev-karpenter-node
+
+  # EKS-optimized Amazon Linux 2023.
+  #
+  # For the dev environment we allow Karpenter
+  # to select the latest supported AL2023 image.
+  # Production should pin and promote AMI versions.
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # Launch only inside the private EKS subnets.
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: aegis-eks-dev
+
+  # Attach the EKS security group discovered
+  # through the same cluster-specific tag.
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: aegis-eks-dev
+
+  tags:
+    Project: aegis
+    Environment: eks-dev
+    ManagedBy: karpenter
+    Component: worker-node
