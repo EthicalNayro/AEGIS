@@ -14,6 +14,18 @@ urlpatterns = [
     ),
 
     path(
+        "observability/",
+        views.observability,
+        name="observability"
+    ),
+
+    path(
+        "grafana-auth/",
+        views.grafana_auth,
+        name="grafana_auth"
+    ),
+
+    path(
         "<str:incident_id>/",
         views.finding_detail,
         name="finding_detail"

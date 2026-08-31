@@ -34,8 +34,23 @@ grafana:
       memory: 512Mi
 
   grafana.ini:
+    server:
+      domain: app.aegis-project.ddnsfree.com
+      root_url: https://%(domain)s/plugins/aegis/grafana/
+      serve_from_sub_path: true
+    security:
+      allow_embedding: true
     users:
       allow_sign_up: false
+      auto_assign_org: true
+      auto_assign_org_role: Viewer
+    auth.proxy:
+      enabled: true
+      header_name: X-WEBAUTH-USER
+      header_property: username
+      auto_sign_up: true
+      sync_ttl: 15
+      enable_login_token: false
     auth.anonymous:
       enabled: false
     analytics:

@@ -1,0 +1,117 @@
+{% extends "aegis_review/base.html" %}
+
+{% block aegis_title %}Observability · AEGIS Security{% endblock %}
+
+{% block aegis_head %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const frame = document.getElementById('aegis-grafana-frame');
+    const loading = document.getElementById('aegis-observability-loading');
+    const dashboardTitle = document.getElementById('aegis-active-dashboard-title');
+    const dashboardDescription = document.getElementById('aegis-active-dashboard-description');
+    const openDashboard = document.getElementById('aegis-open-grafana');
+    const tabs = [...document.querySelectorAll('[data-dashboard-url]')];
+
+    const showLoading = () => {
+      loading?.removeAttribute('hidden');
+      frame?.setAttribute('aria-busy', 'true');
+    };
+
+    frame?.addEventListener('load', () => {
+      loading?.setAttribute('hidden', '');
+      frame.removeAttribute('aria-busy');
+    });
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        if (tab.getAttribute('aria-selected') === 'true') return;
+
+        tabs.forEach((item) => {
+          item.setAttribute('aria-selected', 'false');
+          item.classList.remove('is-active');
+        });
+
+        tab.setAttribute('aria-selected', 'true');
+        tab.classList.add('is-active');
+        dashboardTitle.textContent = tab.dataset.dashboardLabel;
+        dashboardDescription.textContent = tab.dataset.dashboardDescription;
+        openDashboard.href = tab.dataset.dashboardUrl;
+        showLoading();
+        frame.src = tab.dataset.dashboardUrl;
+        frame.title = `${tab.dataset.dashboardLabel} Grafana dashboard`;
+      });
+    });
+  });
+</script>
+{% endblock %}
+
+{% block aegis_content %}
+<section class="aegis-page-heading aegis-observability-heading" aria-labelledby="observability-title">
+  <div>
+    <p class="aegis-eyebrow">AEGIS / Platform Intelligence</p>
+    <h1 id="observability-title">Security platform observability</h1>
+    <p>Live Kubernetes telemetry for the <code>aegis-system</code> namespace, presented through the secured AEGIS Grafana gateway.</p>
+  </div>
+  <div class="aegis-observability-health" aria-label="Observability services online">
+    <span class="aegis-live-dot" aria-hidden="true"></span>
+    <div><strong>Telemetry online</strong><small>Prometheus · 30s scrape</small></div>
+  </div>
+</section>
+
+<section class="aegis-observability-summary" aria-label="Observability scope">
+  <div><i class="mdi mdi-kubernetes" aria-hidden="true"></i><span>Namespace<strong>aegis-system</strong></span></div>
+  <div><i class="mdi mdi-database-search-outline" aria-hidden="true"></i><span>Data source<strong>Prometheus</strong></span></div>
+  <div><i class="mdi mdi-refresh" aria-hidden="true"></i><span>Live refresh<strong>10–30 seconds</strong></span></div>
+  <div><i class="mdi mdi-shield-account-outline" aria-hidden="true"></i><span>Access policy<strong>Staff · Viewer</strong></span></div>
+</section>
+
+<section class="aegis-observability-shell aegis-panel" aria-labelledby="aegis-active-dashboard-title">
+  <header class="aegis-observability-toolbar">
+    <div>
+      <span class="aegis-toolbar-kicker">LIVE OPERATIONS VIEW</span>
+      <h2 id="aegis-active-dashboard-title">{{ initial_dashboard.label }}</h2>
+      <p id="aegis-active-dashboard-description">{{ initial_dashboard.description }}</p>
+    </div>
+    <a id="aegis-open-grafana" class="aegis-open-grafana" href="{{ initial_dashboard.url }}" target="_blank" rel="noopener">
+      <i class="mdi mdi-open-in-new" aria-hidden="true"></i>
+      Open full view
+    </a>
+  </header>
+
+  <div class="aegis-dashboard-tabs" role="tablist" aria-label="Observability dashboards">
+    {% for dashboard in dashboards %}
+      <button
+        class="aegis-dashboard-tab{% if forloop.first %} is-active{% endif %}"
+        type="button"
+        role="tab"
+        aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+        data-dashboard-url="{{ dashboard.url }}"
+        data-dashboard-label="{{ dashboard.label }}"
+        data-dashboard-description="{{ dashboard.description }}"
+      >
+        <i class="mdi {{ dashboard.icon }}" aria-hidden="true"></i>
+        <span><strong>{{ dashboard.label }}</strong><small>{{ dashboard.description }}</small></span>
+      </button>
+    {% endfor %}
+  </div>
+
+  <div class="aegis-grafana-stage">
+    <div id="aegis-observability-loading" class="aegis-grafana-loading" role="status" aria-live="polite">
+      <span aria-hidden="true"></span>
+      <strong>Connecting to live telemetry</strong>
+      <small>Authenticating your analyst session with Grafana…</small>
+    </div>
+    <iframe
+      id="aegis-grafana-frame"
+      class="aegis-grafana-frame"
+      src="{{ initial_dashboard.url }}"
+      title="{{ initial_dashboard.label }} Grafana dashboard"
+      loading="eager"
+      referrerpolicy="same-origin"
+      allow="fullscreen"
+      aria-busy="true"
+    ></iframe>
+    <noscript><p class="aegis-grafana-noscript">JavaScript is required to switch between live Grafana dashboards.</p></noscript>
+  </div>
+</section>
+{% endblock %}

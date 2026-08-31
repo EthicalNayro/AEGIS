@@ -155,6 +155,45 @@ textarea.aegis-field { height: auto; min-height: 92px; padding-top: .7rem; resiz
 .aegis-reviewed-box dd { margin: .3rem 0 0; color: #eef8ff; font-size: .78rem; }
 .aegis-message { margin-bottom: 1rem; border: 1px solid rgba(34,211,238,.3); border-radius: .5rem; background: rgba(8,145,178,.11); color: #c9f4fb; padding: .8rem 1rem; font-size: .78rem; }
 
+.aegis-observability-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem; }
+.aegis-observability-heading code { color: #b8edf6; font-family: ui-monospace,SFMono-Regular,Menlo,monospace; }
+.aegis-observability-health { position: relative; z-index: 1; display: flex; align-items: center; gap: .75rem; min-width: 190px; border: 1px solid rgba(52,211,153,.24); border-radius: .6rem; background: rgba(6,78,59,.18); padding: .72rem .85rem; }
+.aegis-observability-health .aegis-live-dot { flex: 0 0 auto; }
+.aegis-observability-health strong,.aegis-observability-health small { display: block; }
+.aegis-observability-health strong { color: #dffbf0; font-size: .75rem; }
+.aegis-observability-health small { margin-top: .15rem; color: #72a995; font-size: .62rem; }
+.aegis-observability-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .75rem; margin: 0 .75rem 1rem; }
+.aegis-observability-summary > div { display: flex; align-items: center; gap: .7rem; border: 1px solid var(--aegis-line); border-radius: .55rem; background: rgba(8,24,41,.78); padding: .8rem .9rem; }
+.aegis-observability-summary i { color: var(--aegis-cyan); font-size: 1.2rem; }
+.aegis-observability-summary span,.aegis-observability-summary strong { display: block; }
+.aegis-observability-summary span { color: #7189a1; font-size: .62rem; text-transform: uppercase; letter-spacing: .05em; }
+.aegis-observability-summary strong { margin-top: .2rem; color: #dceaf4; font-size: .72rem; letter-spacing: 0; text-transform: none; }
+.aegis-observability-shell { overflow: hidden; }
+.aegis-observability-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--aegis-line); padding: 1rem 1.15rem; }
+.aegis-toolbar-kicker { color: #59748f; font-size: .59rem; font-weight: 850; letter-spacing: .13em; }
+.aegis-observability-toolbar h2 { margin: .28rem 0 0; color: #fff; font-size: 1.12rem; }
+.aegis-observability-toolbar p { margin: .25rem 0 0; color: var(--aegis-muted); font-size: .7rem; }
+.aegis-open-grafana { display: inline-flex; align-items: center; gap: .45rem; flex: 0 0 auto; border: 1px solid rgba(34,211,238,.42); border-radius: .42rem; background: rgba(8,145,178,.1); color: #6ae3f3; padding: .56rem .72rem; font-size: .68rem; font-weight: 750; text-decoration: none; }
+.aegis-open-grafana:hover { background: rgba(34,211,238,.18); color: #d9fbff; }
+.aegis-dashboard-tabs { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: .55rem; border-bottom: 1px solid var(--aegis-line); background: rgba(3,13,24,.46); padding: .75rem; }
+.aegis-dashboard-tab { display: flex; align-items: center; gap: .6rem; min-width: 0; border: 1px solid rgba(130,159,190,.17); border-radius: .48rem; background: rgba(11,27,45,.72); color: #8fa4b9; padding: .65rem .72rem; text-align: left; cursor: pointer; }
+.aegis-dashboard-tab:hover { border-color: rgba(34,211,238,.32); background: rgba(13,44,65,.7); color: #dffaff; }
+.aegis-dashboard-tab.is-active { border-color: rgba(34,211,238,.5); background: linear-gradient(145deg,rgba(8,145,178,.24),rgba(8,47,73,.38)); color: #effcff; box-shadow: inset 0 0 0 1px rgba(34,211,238,.05),0 7px 18px rgba(0,0,0,.16); }
+.aegis-dashboard-tab > i { flex: 0 0 auto; color: #6f8aa3; font-size: 1.15rem; }
+.aegis-dashboard-tab.is-active > i { color: var(--aegis-cyan); }
+.aegis-dashboard-tab span,.aegis-dashboard-tab strong,.aegis-dashboard-tab small { display: block; min-width: 0; }
+.aegis-dashboard-tab strong { color: inherit; font-size: .69rem; }
+.aegis-dashboard-tab small { overflow: hidden; margin-top: .18rem; color: #5f7891; font-size: .56rem; text-overflow: ellipsis; white-space: nowrap; }
+.aegis-dashboard-tab.is-active small { color: #83afbd; }
+.aegis-grafana-stage { position: relative; min-height: 760px; background: #07111f; }
+.aegis-grafana-frame { display: block; width: 100%; height: 760px; border: 0; background: #07111f; }
+.aegis-grafana-loading { position: absolute; z-index: 2; inset: 0; display: grid; align-content: center; justify-items: center; background: radial-gradient(circle at center,rgba(8,47,73,.92),rgba(4,14,26,.98) 55%); color: #dffaff; text-align: center; }
+.aegis-grafana-loading[hidden] { display: none; }
+.aegis-grafana-loading > span { width: 34px; height: 34px; margin-bottom: .85rem; border: 3px solid rgba(34,211,238,.18); border-top-color: var(--aegis-cyan); border-radius: 50%; animation: aegis-spin .75s linear infinite; }
+.aegis-grafana-loading strong { font-size: .82rem; }
+.aegis-grafana-loading small { margin-top: .32rem; color: #6f8da6; font-size: .66rem; }
+.aegis-grafana-noscript { margin: 0; color: #fbd34d; padding: 1rem; text-align: center; }
+
 @media (max-width: 1100px) {
   .aegis-topbar { grid-template-columns: 210px minmax(0,1fr) auto; }
   .aegis-layout { grid-template-columns: 210px minmax(0,1fr); }
@@ -163,6 +202,8 @@ textarea.aegis-field { height: auto; min-height: 92px; padding-top: .7rem; resiz
   .aegis-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .aegis-filter-grid { grid-template-columns: 1fr 1fr; }
   .aegis-filter-grid > :first-child { grid-column: 1/-1; }
+  .aegis-observability-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .aegis-dashboard-tabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
 @media (max-width: 780px) {
   .aegis-topbar { grid-template-columns: 1fr auto; }
@@ -176,6 +217,11 @@ textarea.aegis-field { height: auto; min-height: 92px; padding-top: .7rem; resiz
   .aegis-sidebar nav a { white-space: nowrap; }
   .aegis-main { padding: 1.25rem 1rem 2rem; }
   .aegis-summary-grid,.aegis-analysis-grid { grid-template-columns: 1fr; }
+  .aegis-observability-heading,.aegis-observability-toolbar { flex-direction: column; }
+  .aegis-observability-health { width: 100%; }
+  .aegis-dashboard-tabs { display: flex; overflow-x: auto; }
+  .aegis-dashboard-tab { flex: 0 0 170px; }
+  .aegis-grafana-stage,.aegis-grafana-frame { min-height: 680px; height: 680px; }
 }
 @media (max-width: 560px) {
   .aegis-top-actions { padding-right: .7rem; }
@@ -186,5 +232,6 @@ textarea.aegis-field { height: auto; min-height: 92px; padding-top: .7rem; resiz
   .aegis-review-actions { flex-direction: column; }
   .aegis-verdict { width: 100%; }
   .aegis-user { padding-left: .6rem; }
+  .aegis-observability-summary { grid-template-columns: 1fr; margin-right: 0; margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }

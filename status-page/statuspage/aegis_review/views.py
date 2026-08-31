@@ -9,10 +9,10 @@ from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 
 PLUGIN_NAME = "aegis_review"
@@ -26,6 +26,87 @@ VALID_CLASSIFICATIONS = {
 }
 
 MAX_ANALYST_NOTE_LENGTH = 2000
+
+OBSERVABILITY_DASHBOARDS = (
+    {
+        "key": "platform",
+        "label": "Platform Health",
+        "description": "AEGIS services, nodes, restarts, CPU, and memory",
+        "icon": "mdi-shield-pulse-outline",
+        "uid": "aegis-platform-health",
+        "slug": "aegis-platform-health",
+        "query": {
+            "orgId": "1",
+            "refresh": "10s",
+            "from": "now-1h",
+            "to": "now",
+            "kiosk": "tv",
+        },
+    },
+    {
+        "key": "workloads",
+        "label": "Workloads",
+        "description": "CPU and memory by deployment and workload",
+        "icon": "mdi-cube-outline",
+        "uid": "a87fb0d919ec0ea5f6543124e16c42a5",
+        "slug": "kubernetes-compute-resources-namespace-workloads",
+        "query": {
+            "orgId": "1",
+            "refresh": "30s",
+            "from": "now-1h",
+            "to": "now",
+            "var-namespace": "aegis-system",
+            "kiosk": "tv",
+        },
+    },
+    {
+        "key": "pods",
+        "label": "Pods",
+        "description": "Namespace-level pod utilization and capacity",
+        "icon": "mdi-hexagon-multiple-outline",
+        "uid": "85a562078cdf77779eaa1add43ccec1e",
+        "slug": "kubernetes-compute-resources-namespace-pods",
+        "query": {
+            "orgId": "1",
+            "refresh": "30s",
+            "from": "now-1h",
+            "to": "now",
+            "var-namespace": "aegis-system",
+            "kiosk": "tv",
+        },
+    },
+    {
+        "key": "network",
+        "label": "Network",
+        "description": "Traffic, receive, and transmit rates by workload",
+        "icon": "mdi-access-point-network",
+        "uid": "bbb2a765a623ae38130206c7d94a160f",
+        "slug": "kubernetes-networking-namespace-workload",
+        "query": {
+            "orgId": "1",
+            "refresh": "30s",
+            "from": "now-1h",
+            "to": "now",
+            "var-namespace": "aegis-system",
+            "kiosk": "tv",
+        },
+    },
+    {
+        "key": "nodes",
+        "label": "Nodes",
+        "description": "Cluster node saturation, pressure, and allocation",
+        "icon": "mdi-server-network",
+        "uid": "058020e04168bfdea0c52269cb699df2",
+        "slug": "kubernetes-compute-resources-nodes-overview",
+        "query": {
+            "orgId": "1",
+            "refresh": "30s",
+            "from": "now-1h",
+            "to": "now",
+            "kiosk": "tv",
+        },
+    },
+)
 
 
 def analyst_required(view_func):
@@ -55,6 +136,52 @@ def analyst_required(view_func):
         )
 
     return wrapper
+
+
+def get_observability_dashboards():
+    dashboards = []
+
+    for dashboard in OBSERVABILITY_DASHBOARDS:
+        dashboard = dashboard.copy()
+        dashboard["url"] = (
+            "/plugins/aegis/grafana/d/"
+            f"{dashboard['uid']}/{dashboard['slug']}?"
+            f"{urlencode(dashboard['query'])}"
+        )
+        dashboards.append(dashboard)
+
+    return dashboards
+
+
+@analyst_required
+def observability(request):
+    dashboards = get_observability_dashboards()
+
+    return render(
+        request,
+        "aegis_review/observability.html",
+        {
+            "dashboards": dashboards,
+            "initial_dashboard": dashboards[0],
+        },
+    )
+
+
+@require_GET
+def grafana_auth(request):
+    """Authorize internal Nginx auth subrequests for the Grafana gateway."""
+
+    if not request.user.is_authenticated:
+        return HttpResponse(status=401)
+
+    if not request.user.is_active or not request.user.is_staff:
+        return HttpResponse(status=403)
+
+    response = HttpResponse(status=204)
+    response["X-WEBAUTH-USER"] = f"aegis-staff-{request.user.pk}"
+    response["Cache-Control"] = "no-store"
+
+    return response
 
 
 def get_plugin_config():
