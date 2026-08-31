@@ -12,6 +12,9 @@ resources:
   - rq-worker.yaml
   - rq-worker-pdb.yaml
   - rq-scheduler.yaml
+  - external-dns-rbac.yaml
+  - external-dns-webhook-config.yaml
+  - external-dns-deployment.yaml
   - ingress.yaml
 
 configMapGenerator:
