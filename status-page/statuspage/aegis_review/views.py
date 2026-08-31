@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from functools import wraps
 from urllib.parse import urlencode
 
 import boto3
@@ -24,12 +25,15 @@ VALID_CLASSIFICATIONS = {
     "UNCERTAIN",
 }
 
+MAX_ANALYST_NOTE_LENGTH = 2000
+
 
 def analyst_required(view_func):
     """
     AEGIS review actions are restricted to authenticated staff users.
     """
 
+    @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             login_url = reverse("login")
@@ -205,6 +209,11 @@ def normalize_finding(item):
         "reviewed_at": get_string(
             item,
             "reviewed_at",
+            ""
+        ),
+        "reviewed_by": get_string(
+            item,
+            "reviewed_by",
             ""
         ),
         "bedrock_model": get_string(
@@ -453,6 +462,21 @@ def review_finding(
         .strip()
     )
 
+    if len(note) > MAX_ANALYST_NOTE_LENGTH:
+        messages.error(
+            request,
+            (
+                "Analyst notes are limited to "
+                f"{MAX_ANALYST_NOTE_LENGTH} characters."
+            )
+        )
+
+        return redirect(
+            "plugins:aegis_review:"
+            "finding_detail",
+            incident_id=incident_id
+        )
+
     if verdict not in {
         "CORRECT",
         "INCORRECT",
@@ -501,7 +525,8 @@ def review_finding(
         "SET review_status = :reviewed, "
         "human_verdict = :verdict, "
         "feedback_label = :feedback, "
-        "reviewed_at = :reviewed_at"
+        "reviewed_at = :reviewed_at, "
+        "reviewed_by = :reviewed_by"
     )
 
     values = {
@@ -519,6 +544,9 @@ def review_finding(
         },
         ":reviewed_at": {
             "S": reviewed_at
+        },
+        ":reviewed_by": {
+            "S": request.user.get_username()
         },
     }
 
@@ -583,7 +611,11 @@ def review_finding(
             incident_id=incident_id
         )
 
-    except ClientError:
+    except (BotoCoreError, ClientError):
+        logger.exception(
+            "Unable to record AEGIS review for %s",
+            incident_id,
+        )
         messages.error(
             request,
             (
@@ -604,6 +636,12 @@ def review_finding(
             "Human review recorded "
             "successfully."
         )
+    )
+
+    logger.info(
+        "AEGIS review recorded for %s by %s",
+        incident_id,
+        request.user.get_username(),
     )
 
     return redirect(

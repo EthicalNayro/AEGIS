@@ -11,7 +11,7 @@ class AEGISReviewConfig(PluginConfig):
         "for AEGIS AI security findings."
     )
 
-    version = "1.1.0"
+    version = "1.2.1"
 
     author = "AEGIS Project"
 

@@ -4,7 +4,7 @@
 {% block title %}{% block aegis_title %}AEGIS Security{% endblock %}{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="{% static 'aegis_review/aegis.css' %}?v=1.2.0">
+  <link rel="stylesheet" href="{% static 'aegis_review/aegis.css' %}?v=1.2.1">
   {% block aegis_head %}{% endblock %}
 {% endblock %}
 
@@ -38,19 +38,31 @@
 
   <div class="aegis-layout">
     <aside class="aegis-sidebar">
-      <p class="aegis-sidebar-label">Analyst workspace</p>
+      <p class="aegis-sidebar-label">Analyst operations</p>
       <nav aria-label="AEGIS workspace">
-        <a class="is-active" href="{% url 'plugins:aegis_review:findings' %}"><span>▦</span>Command Center</a>
-        <a href="{% url 'plugins:aegis_review:findings' %}?status=PENDING_REVIEW"><span>◫</span>Review Queue</a>
-        <a href="{% url 'plugins:aegis_review:findings' %}?status=REVIEWED"><span>✓</span>Reviewed Cases</a>
-        <a href="{% url 'plugins:aegis_review:findings' %}?severity=CRITICAL"><span>⌖</span>Critical Exposure</a>
+        <a class="{% if not request.GET %}is-active{% endif %}" href="{% url 'plugins:aegis_review:findings' %}"><i class="mdi mdi-view-dashboard-outline" aria-hidden="true"></i>Command Center</a>
+        <a class="{% if request.GET.status == 'PENDING_REVIEW' %}is-active{% endif %}" href="{% url 'plugins:aegis_review:findings' %}?status=PENDING_REVIEW"><i class="mdi mdi-folder-alert-outline" aria-hidden="true"></i>Findings</a>
+        <a class="{% if request.GET.status == 'REVIEWED' %}is-active{% endif %}" href="{% url 'plugins:aegis_review:findings' %}?status=REVIEWED"><i class="mdi mdi-briefcase-check-outline" aria-hidden="true"></i>Cases</a>
+        <a class="{% if request.GET.severity == 'CRITICAL' %}is-active{% endif %}" href="{% url 'plugins:aegis_review:findings' %}?severity=CRITICAL"><i class="mdi mdi-crosshairs-gps" aria-hidden="true"></i>Critical Exposure</a>
       </nav>
 
       <div class="aegis-sidebar-section">
-        <p class="aegis-sidebar-label">Platform</p>
+        <p class="aegis-sidebar-label">Platform intelligence</p>
         <nav>
-          <a href="{% url 'dashboard' %}"><span>◈</span>Status-Page</a>
-          {% if request.user.is_staff %}<a href="{% url 'admin:index' %}"><span>⚙</span>Administration</a>{% endif %}
+          {% if perms.components.view_component %}<a href="{% url 'components:component_list' %}"><i class="mdi mdi-server-network" aria-hidden="true"></i>Components</a>{% endif %}
+          {% if perms.metrics.view_metric %}<a href="{% url 'metrics:metric_list' %}"><i class="mdi mdi-chart-timeline-variant" aria-hidden="true"></i>Metrics</a>{% endif %}
+          {% if perms.extras.view_objectchange %}<a href="{% url 'extras:objectchange_list' %}"><i class="mdi mdi-history" aria-hidden="true"></i>Audit Log</a>{% endif %}
+          {% if perms.extras.view_webhook %}<a href="{% url 'extras:webhook_list' %}"><i class="mdi mdi-webhook" aria-hidden="true"></i>Integrations</a>{% endif %}
+          <a href="{% url 'users:preferences' %}"><i class="mdi mdi-cog-outline" aria-hidden="true"></i>Settings</a>
+        </nav>
+      </div>
+
+      <div class="aegis-sidebar-section">
+        <p class="aegis-sidebar-label">Access & governance</p>
+        <nav>
+          <a href="{% url 'dashboard' %}"><i class="mdi mdi-monitor-dashboard" aria-hidden="true"></i>Status-Page</a>
+          <a href="{% url 'users:profile' %}"><i class="mdi mdi-account-shield-outline" aria-hidden="true"></i>Analyst Profile</a>
+          {% if request.user.is_staff %}<a href="{% url 'admin:index' %}"><i class="mdi mdi-shield-crown-outline" aria-hidden="true"></i>Administration</a>{% endif %}
         </nav>
       </div>
 

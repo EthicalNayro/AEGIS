@@ -6,7 +6,30 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-aegis-review-form]').forEach((form) => {
-      form.addEventListener('submit', () => {
+      const verdictField = form.querySelector('[data-aegis-verdict-field]');
+      const classificationField = form.querySelector('[name="correct_classification"]');
+
+      classificationField?.addEventListener('change', () => {
+        classificationField.setCustomValidity('');
+      });
+
+      form.addEventListener('submit', (event) => {
+        const selectedVerdict = event.submitter?.dataset.verdict || verdictField?.value;
+
+        if (!selectedVerdict) {
+          event.preventDefault();
+          return;
+        }
+
+        if (selectedVerdict === 'INCORRECT' && !classificationField?.value) {
+          event.preventDefault();
+          classificationField?.setCustomValidity('Select the corrected classification.');
+          classificationField?.reportValidity();
+          return;
+        }
+
+        verdictField.value = selectedVerdict;
+        form.setAttribute('aria-busy', 'true');
         form.querySelectorAll('button[type="submit"]').forEach((button) => { button.disabled = true; });
         document.getElementById('review-submitting')?.removeAttribute('hidden');
       });
@@ -59,16 +82,17 @@
       <header class="aegis-review-head"><div><h2 id="human-review-title">Human Analyst Review</h2><p>This is a one-time, conditional decision. A completed review cannot be overwritten by another analyst.</p></div><span class="aegis-badge {% if finding.review_status == 'PENDING_REVIEW' %}aegis-pending{% else %}aegis-reviewed{% endif %}">{% if finding.review_status == 'PENDING_REVIEW' %}Action required{% else %}Locked after review{% endif %}</span></header>
 
       {% if finding.review_status == 'PENDING_REVIEW' %}
-        <form method="post" action="{% url 'plugins:aegis_review:review_finding' finding.incident_id %}" data-aegis-review-form>
+        <form id="aegis-human-review-form" method="post" action="{% url 'plugins:aegis_review:review_finding' finding.incident_id %}" data-aegis-review-form>
           {% csrf_token %}
+          <input type="hidden" name="verdict" value="" data-aegis-verdict-field>
           <div class="aegis-review-grid">
-            <label><span class="aegis-label">Analyst note <small>(optional)</small></span><textarea class="aegis-field" name="note" rows="3" placeholder="Add evidence or observations about this incident"></textarea></label>
+            <label><span class="aegis-label">Analyst note <small>(optional · max 2,000 characters)</small></span><textarea class="aegis-field" name="note" rows="3" maxlength="2000" placeholder="Add evidence or observations about this incident"></textarea></label>
             <label><span class="aegis-label">Corrected classification <small>(if incorrect)</small></span><select class="aegis-field" name="correct_classification"><option value="">Select corrected classification</option><option value="TRUE_POSITIVE">TRUE_POSITIVE</option><option value="FALSE_POSITIVE">FALSE_POSITIVE</option><option value="UNCERTAIN">UNCERTAIN</option></select></label>
           </div>
-          <div class="aegis-review-actions"><span id="review-submitting" hidden>Recording decision…</span><button class="aegis-verdict correct" type="submit" name="verdict" value="CORRECT">✓ AI IS CORRECT</button><button class="aegis-verdict incorrect" type="submit" name="verdict" value="INCORRECT">✕ AI IS INCORRECT</button></div>
+          <div class="aegis-review-actions"><span id="review-submitting" class="aegis-submitting" role="status" aria-live="polite" hidden>Recording decision…</span><button class="aegis-verdict correct" type="submit" data-verdict="CORRECT">✓ AI IS CORRECT</button><button class="aegis-verdict incorrect" type="submit" data-verdict="INCORRECT">✕ AI IS INCORRECT</button></div>
         </form>
       {% else %}
-        <div class="aegis-reviewed-box"><h3>Review recorded and protected from overwrite</h3><dl><div><dt>Human verdict</dt><dd>{{ finding.human_verdict }}</dd></div><div><dt>Reviewed at</dt><dd>{{ finding.reviewed_at }}</dd></div>{% if finding.human_classification %}<div><dt>Correct classification</dt><dd>{{ finding.human_classification }}</dd></div>{% endif %}{% if finding.analyst_note %}<div><dt>Analyst note</dt><dd>{{ finding.analyst_note }}</dd></div>{% endif %}</dl></div>
+        <div class="aegis-reviewed-box"><h3>Review recorded and protected from overwrite</h3><dl><div><dt>Human verdict</dt><dd>{{ finding.human_verdict }}</dd></div><div><dt>Reviewed at</dt><dd>{{ finding.reviewed_at }}</dd></div>{% if finding.reviewed_by %}<div><dt>Reviewed by</dt><dd>{{ finding.reviewed_by }}</dd></div>{% endif %}{% if finding.human_classification %}<div><dt>Correct classification</dt><dd>{{ finding.human_classification }}</dd></div>{% endif %}{% if finding.analyst_note %}<div><dt>Analyst note</dt><dd>{{ finding.analyst_note }}</dd></div>{% endif %}</dl></div>
       {% endif %}
     </section>
   {% endif %}
