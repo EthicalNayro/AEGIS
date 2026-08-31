@@ -19,6 +19,12 @@ spec:
       targetRevision: phase-1-1/platform-modernization
       ref: values
 
+    # AEGIS-owned observability resources such as custom Grafana dashboards.
+    # Keeping them in Git makes dashboards reproducible and self-healing.
+    - repoURL: https://github.com/EthicalNayro/AEGIS.git
+      targetRevision: phase-1-1/platform-modernization
+      path: kubernetes/observability/manifests
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
