@@ -2,467 +2,277 @@
 
 ## Status
 
-**In progress — architecture defined, implementation not yet deployed.**
+**Complete — deployed and validated end to end.**
 
-Phase 1.1 modernizes the original AEGIS platform foundation without rewriting the completed Phase 2 security-processing logic.
+Phase 1.1 modernized the original AEGIS server-oriented foundation into a container-native AWS platform while preserving the core Status-Page application requirements and the project's earlier security-processing work.
 
-The original foundation remains the current working environment until the modernized platform has been deployed and validated end-to-end.
-
----
-
-## Why this modernization exists
-
-The original Phase 1 architecture established:
-
-- AWS networking with Terraform;
-- private PostgreSQL and Redis hosts;
-- application deployment through Ansible;
-- explicit Security Group boundaries;
-- encrypted EC2 storage;
-- private backend administration;
-- working Django, Gunicorn, RQ, PostgreSQL, and Redis services.
-
-That foundation proved the platform behavior, but the compute and deployment model is server-oriented.
-
-Phase 1.1 moves the platform toward a scalable container-native operating model.
+The final showcase environment runs on Amazon EKS with managed PostgreSQL/Redis, secure HTTPS ingress, GitOps delivery, AI-assisted security analysis, human review, and production-style resilience controls.
 
 ---
 
-# Target Architecture
+## Why the Modernization Exists
+
+The original Phase 1 foundation proved:
+
+- Terraform-managed AWS networking;
+- private PostgreSQL and Redis;
+- Ansible-managed application configuration;
+- Django, Gunicorn, RQ, PostgreSQL, Redis, and Nginx integration;
+- explicit network boundaries;
+- repeatable host configuration.
+
+The modernization keeps those application responsibilities but replaces the final runtime model with Kubernetes and managed AWS services.
+
+---
+
+## Implemented Architecture
 
 ```text
                          GitHub
                             |
-                 GitHub Actions CI/CD
+                    GitHub Actions CI
                             |
-                    OIDC authentication
+                  AWS OIDC authentication
                             |
-                            v
-                           AWS
-                            |
-            +---------------+---------------+
-            |                               |
-            v                               v
-     Terraform Platform                   Amazon ECR
-            |
-            v
-    +-------------------+
-    |       VPC         |
-    |   10.10.0.0/16    |
-    +-------------------+
-            |
-      +-----+-----+
-      |           |
-      v           v
-     AZ-A        AZ-B
-      |           |
-      +-----+-----+
-            |
-       Amazon EKS
-            |
-     +------+------+----------------+
-     |             |                |
-     v             v                v
- Django Pods    RQ Workers     AEGIS Worker
-     |
-     v
-   ALB
-     |
-  Internet
+            +---------------+----------------+
+            |                                |
+            v                                v
+      Amazon ECR                     GitOps desired state
+                                              |
+                                              v
+                                           Argo CD
+                                              |
+                                              v
+Internet -> ACM -> ALB -> WAF -> Amazon EKS (private workers)
+                                  |       |       |
+                                  |       |       +--> RQ scheduler
+                                  |       +----------> RQ workers
+                                  +------------------> Status-Page web
+                                  |
+                                  +--> RDS PostgreSQL Multi-AZ
+                                  +--> ElastiCache Redis Multi-AZ/TLS
 
-EKS workloads
-     |
-     +-------------> RDS PostgreSQL
-     |
-     +-------------> ElastiCache Redis
+WAF -> CloudWatch -> EventBridge -> SQS -> Analyzer -> Bedrock -> DynamoDB
+                                                         |
+                                                         v
+                                                  Human Review
+                                                         |
+                                                         v
+                                                AI Quality Metrics
 ```
 
 ---
 
-# Network Design
+## Network Design
 
-The modernization uses a new VPC rather than modifying the currently deployed Phase 1 VPC in place.
+The modern environment uses VPC `10.10.0.0/16` across two Availability Zones.
 
-```text
-VPC: 10.10.0.0/16
+Each Availability Zone contains:
 
-Availability Zone A
-├── Public Subnet
-│   └── 10.10.0.0/24
-│
-├── EKS Control-Plane Subnet
-│   └── 10.10.2.0/28
-│
-├── Private EKS Node / Pod Subnet
-│   └── 10.10.16.0/20
-│
-└── Private Data Subnet
-    └── 10.10.64.0/24
+- a public subnet;
+- a dedicated EKS control-plane subnet;
+- a private EKS node/Pod subnet;
+- a private data subnet.
 
+The design uses NAT egress per Availability Zone and keeps worker nodes/data services private.
 
-Availability Zone B
-├── Public Subnet
-│   └── 10.10.1.0/24
-│
-├── EKS Control-Plane Subnet
-│   └── 10.10.2.16/28
-│
-├── Private EKS Node / Pod Subnet
-│   └── 10.10.32.0/20
-│
-└── Private Data Subnet
-    └── 10.10.65.0/24
-```
-
-The larger EKS node/Pod subnet ranges intentionally leave room for Kubernetes Pod IP allocation through the AWS VPC CNI.
-
-The two small EKS control-plane subnets are reserved for EKS-managed network interfaces. Keeping them separate reduces address competition between control-plane ENIs and application workloads.
-
-The existing Phase 1 VPC remains unchanged until migration validation is complete.
+The larger EKS node/Pod subnet ranges provide address space for AWS VPC CNI Pod IP allocation. Dedicated control-plane subnets reduce address contention with application workloads.
 
 ---
 
-# Compute Model
+## EKS Platform
 
-## Current
-
-```text
-Application EC2
-PostgreSQL EC2
-Redis EC2
-```
-
-## Target
-
-```text
-Amazon EKS
-├── Django / Gunicorn Deployment
-├── RQ Worker Deployment
-├── RQ Scheduler workload
-└── AEGIS Security Worker Deployment
-
-Amazon RDS PostgreSQL
-
-Amazon ElastiCache Redis
-```
-
-The Kubernetes workloads are stateless where possible.
-
-Persistent data is intentionally kept outside Kubernetes and delegated to managed AWS data services.
-
----
-
-# EKS Initial Design
-
-The first implementation will use:
+Implemented capabilities include:
 
 - Amazon EKS;
-- EKS Managed Node Groups;
+- EKS Managed Node Group baseline;
 - private worker nodes;
-- nodes distributed across two Availability Zones;
-- Kubernetes Deployments for application workloads;
-- Kubernetes Services for internal discovery;
-- AWS Load Balancer Controller for ingress;
-- Horizontal Pod Autoscaler where appropriate;
-- readiness and liveness probes;
-- resource requests and limits;
+- nodes across two Availability Zones;
+- AWS VPC CNI;
+- EKS Pod Identity Agent;
+- Metrics Server;
+- control-plane logging;
+- Pod Security Admission in `restricted` mode;
+- workload-specific service accounts and IAM roles;
+- readiness/liveness probes;
+- resource requests/limits;
 - Pod Disruption Budgets;
-- NetworkPolicies;
-- dedicated workload identities.
+- topology-spread constraints;
+- validated Karpenter scaling with Spot and On-Demand capacity.
 
-Karpenter may be evaluated later after the initial EKS architecture is stable.
-
----
-
-# Terraform Environment Strategy
-
-The existing environment is not modified destructively.
-
-```text
-terraform/environments/
-
-├── dev/
-│   └── existing Phase 1 EC2 architecture
-│
-└── eks-dev/
-    └── Phase 1.1 modernized architecture
-```
-
-The modernization follows a parallel-build strategy:
-
-```text
-Build new platform
-      |
-      v
-Validate
-      |
-      v
-Deploy workloads
-      |
-      v
-Validate Phase 2 runtime
-      |
-      v
-Cut over
-      |
-      v
-Retire old EC2 platform
-```
-
-This reduces migration risk and preserves a known-good environment during the refactor.
+Karpenter was originally considered future work but was later implemented and validated after the baseline EKS platform became stable.
 
 ---
 
-# Terraform State
+## Managed Data Services
 
-The target deployment model uses remote state rather than developer-local Terraform state.
+The final runtime keeps persistent data outside Kubernetes.
 
-Target:
+### RDS PostgreSQL
 
-```text
-Amazon S3
-├── encrypted Terraform state
-├── versioning
-└── state locking
-```
+- PostgreSQL 16;
+- Multi-AZ;
+- encrypted storage;
+- backups;
+- deletion protection;
+- private subnets;
+- AWS-managed master secret;
+- database logs enabled.
 
-The backend infrastructure is a bootstrap dependency and must exist before the main Terraform environment can use it.
+### ElastiCache Redis
 
----
+- Redis 7.1;
+- two nodes;
+- Multi-AZ;
+- automatic failover;
+- encryption at rest;
+- TLS in transit;
+- snapshot retention.
 
-# CI/CD Target
-
-## Pull Request
-
-```text
-Pull Request
-    |
-    +--> terraform fmt
-    |
-    +--> terraform validate
-    |
-    +--> linting
-    |
-    +--> security scanning
-    |
-    +--> unit tests
-    |
-    +--> terraform plan
-```
-
-No infrastructure changes occur from a pull request.
+This preserves the original application requirement for PostgreSQL and Redis while improving operational resilience.
 
 ---
 
-## Main Branch Deployment
+## Status-Page on Kubernetes
+
+The application deployment includes:
+
+- multiple web replicas;
+- Gunicorn;
+- unprivileged Nginx sidecar;
+- ClusterIP Service;
+- RQ worker deployment;
+- singleton RQ scheduler;
+- Pod Disruption Budgets;
+- revision-aware topology spread;
+- secure container contexts;
+- runtime config rendering;
+- managed secrets;
+- dedicated migration Job.
+
+The public path is:
 
 ```text
-Merge to main
-     |
-     v
-GitHub Actions
-     |
-     v
-AWS authentication through OIDC
-     |
-     v
-Terraform Plan
-     |
-     v
-GitHub Environment
-Required Approval
-     |
-     v
-Terraform Apply
+Internet
+ -> HTTPS / ACM
+ -> ALB
+ -> AWS WAF
+ -> Ingress
+ -> Status-Page Service
+ -> Nginx
+ -> Gunicorn
+ -> Django
 ```
-
-The apply stage must never run automatically without the configured deployment approval gate.
-
-Concurrent Terraform deployments must also be prevented.
 
 ---
 
-# AWS Authentication
+## GitHub Actions and GitOps
 
-Long-lived AWS access keys must not be stored in GitHub.
+The final delivery model is not direct CI/CD to Kubernetes.
 
-Target authentication:
+GitHub Actions performs CI and artifact delivery:
 
-```text
-GitHub Actions
-      |
-      | OIDC
-      v
-AWS STS
-      |
-      v
-Deployment IAM Role
-```
+- source validation;
+- multi-stage image build;
+- Trivy scan and CRITICAL gate;
+- CycloneDX SBOM;
+- OIDC authentication;
+- immutable ECR publish/reuse;
+- GitOps digest update.
 
-IAM bootstrap resources may need to be created outside the normal deployment pipeline when the active project role does not have permission to manage IAM identity providers or roles.
+Argo CD performs continuous delivery to EKS.
+
+This means the CI role requires no EKS permissions.
+
+The Argo CD Application uses automated sync, pruning, self-heal, and project boundaries. Database migrations run as a `PreSync` hook before rollout.
 
 ---
 
-# Current Permission Readiness
+## Safe Delivery Enhancements
 
-The initial read-only permission check produced the following result:
+The final workflow includes safeguards added during implementation:
 
-| Capability | Current result |
+- immutable image tags and digest deployment;
+- idempotent ECR reuse on rerun;
+- exact pinned GitHub Action SHAs;
+- pinned base image digest;
+- SBOM evidence;
+- safe synchronization with the latest GitOps branch;
+- fail-closed rejection when a stale workflow detects newer non-GitOps source changes.
+
+The stale-run protection was exercised by an actual workflow failure and then validated by a successful workflow at the updated HEAD.
+
+---
+
+## Security Event Modernization
+
+The project also added a real-time WAF-driven analysis path:
+
+```text
+WAF BlockedRequests
+ -> CloudWatch Alarm
+ -> EventBridge
+ -> SQS
+ -> AEGIS Analyzer on EKS
+ -> Bedrock Nova Pro
+ -> validated structured result
+ -> DynamoDB
+ -> Human Review
+ -> AI Quality Metrics
+```
+
+Reliability controls include SQS buffering, DLQ redrive, per-message visibility extension, ACK-after-persistence, and idempotent DynamoDB writes.
+
+---
+
+## AI Governance
+
+Amazon Bedrock is used for security analysis, but the design does not grant autonomous control.
+
+Telemetry is treated as untrusted input, model output is parsed and validated, and findings enter a human-review workflow.
+
+Human verdicts are used to calculate AI-quality metrics. This is a measured feedback loop, not reinforcement learning or automatic retraining.
+
+---
+
+## Implementation Milestones — Final State
+
+| Milestone | Result |
 |---|---|
-| AWS STS session | Available |
-| EKS list/read entry point | Available |
-| EC2 networking reads | Available |
-| IAM role read | Available |
-| IAM OIDC provider listing | Blocked |
-| ECR repository read | Available |
-| RDS DB instance read | Blocked |
-| ElastiCache cluster read | Blocked |
-| S3 bucket listing | Available |
-| KMS key listing | Available |
-
-These checks confirm API visibility only.
-
-They do **not** prove create, update, delete, or `iam:PassRole` permissions.
-
----
-
-# Permission Prerequisites
-
-Before infrastructure deployment, the AWS account must support the capabilities required for:
-
-## EKS
-
-- cluster lifecycle;
-- managed node groups;
-- EC2 networking dependencies;
-- required service roles;
-- role passing where required.
-
-## GitHub OIDC
-
-- an AWS OIDC identity provider for GitHub Actions;
-- dedicated GitHub deployment roles;
-- restricted trust policies.
-
-## RDS
-
-- DB subnet groups;
-- PostgreSQL instance lifecycle;
-- parameter/security configuration;
-- required describe operations.
-
-## ElastiCache
-
-- subnet groups;
-- Redis lifecycle;
-- required describe operations.
-
-## Terraform Backend
-
-- S3 state object read/write;
-- state locking;
-- bucket encryption/versioning access.
+| Architecture and permissions | ✅ Complete |
+| Multi-AZ VPC | ✅ Complete |
+| EKS platform | ✅ Complete |
+| ECR/container packaging | ✅ Complete |
+| Managed PostgreSQL/Redis | ✅ Complete |
+| Kubernetes workloads | ✅ Complete |
+| HTTPS/ALB/WAF | ✅ Complete |
+| Security event pipeline | ✅ Complete |
+| Bedrock analyzer | ✅ Complete |
+| Human review / AI quality | ✅ Complete |
+| GitHub OIDC secure CI | ✅ Complete |
+| Argo CD GitOps | ✅ Complete |
+| PreSync migrations | ✅ Complete |
+| Karpenter scaling | ✅ Complete |
+| End-to-end validation | ✅ Complete |
 
 ---
 
-# Migration Principles
+## Explicit Non-Goals / Boundaries
 
-Phase 1.1 follows these rules:
+The final modernization does not claim:
 
-1. Do not destroy the existing Phase 1 platform before replacement validation.
-2. Build the modernized platform in parallel.
-3. Do not move persistent databases into Kubernetes.
-4. Keep AWS credentials out of application containers.
-5. Prefer workload-specific AWS identities.
-6. Keep Kubernetes worker nodes private.
-7. Treat GitHub Actions as the deployment control plane.
-8. Require approval before Terraform apply.
-9. Keep infrastructure changes reproducible through Terraform.
-10. Preserve the existing Phase 2 processing boundaries during runtime migration.
-
----
-
-# Implementation Milestones
-
-## Milestone 0 — Architecture and permissions
-
-- define target architecture;
-- define migration strategy;
-- document AWS permission gaps;
-- define IAM/OIDC bootstrap requirements.
-
-## Milestone 1 — Multi-AZ network
-
-- create the new VPC;
-- create two public subnets;
-- create two dedicated EKS control-plane subnets;
-- create two private EKS node/Pod subnets;
-- create two private data subnets;
-- configure routing and NAT strategy;
-- add Kubernetes load-balancer subnet discovery tags.
-
-## Milestone 2 — EKS platform
-
-- create EKS cluster;
-- create Managed Node Group;
-- validate private node networking;
-- configure cluster access;
-- validate Kubernetes scheduling.
-
-## Milestone 3 — Container registry and application packaging
-
-- create ECR repositories;
-- build application containers;
-- build AEGIS worker container;
-- push immutable image tags.
-
-## Milestone 4 — Managed data services
-
-- deploy RDS PostgreSQL;
-- deploy ElastiCache Redis;
-- configure private connectivity;
-- migrate required schema/data.
-
-This milestone is blocked until the AWS project identity receives the required RDS and ElastiCache permissions.
-
-## Milestone 5 — Kubernetes workloads
-
-- deploy Django/Gunicorn;
-- deploy RQ Worker;
-- deploy scheduler;
-- deploy AEGIS Security Worker;
-- configure health checks and resources;
-- configure NetworkPolicies;
-- validate Phase 2 incident processing from EKS.
-
-## Milestone 6 — GitHub Actions delivery
-
-- configure AWS OIDC bootstrap;
-- configure remote Terraform state;
-- implement PR validation and plan workflow;
-- implement approval-gated apply workflow;
-- protect concurrent deployments.
-
-## Milestone 7 — Cutover
-
-- validate application traffic;
-- validate PostgreSQL and Redis connectivity;
-- validate AEGIS event detection;
-- validate incident persistence;
-- update architecture documentation;
-- retire the legacy EC2 workload architecture.
-
----
-
-# Explicit Non-Goals During Initial Modernization
-
-The first EKS migration does not immediately require:
-
-- service mesh;
+- autonomous incident remediation;
 - multi-region Kubernetes;
-- Karpenter;
-- GitOps controllers;
-- automated incident remediation;
-- Phase 3 AI investigation.
+- HA Argo CD;
+- active production NetworkPolicy enforcement;
+- service mesh;
+- cryptographic image signing/attestation;
+- production Status-Page HPA.
 
-Those capabilities can be evaluated after the platform modernization is stable.
+These are possible future extensions, not missing hidden dependencies.
+
+---
+
+## Outcome
+
+Phase 1.1 successfully transformed the original deployment into a production-style AWS platform with reproducible infrastructure, private Kubernetes compute, managed stateful services, secure software delivery, GitOps reconciliation, observability, AI-assisted security analysis, and explicit human governance.

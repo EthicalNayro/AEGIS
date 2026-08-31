@@ -1,274 +1,210 @@
-# AEGIS — Autonomous Cloud Security Platform
+# AEGIS — AI-Assisted Cloud Security & DevSecOps Platform
 
-AEGIS is an AWS-focused **DevSecOps and cloud-security engineering project** built in phases: first a secure platform foundation, then a resilient security-event pipeline, and later investigation and governed response layers.
+AEGIS is a production-style AWS DevSecOps and cloud-security engineering project that combines **Amazon EKS, GitOps, secure software delivery, managed data services, WAF telemetry, AI-assisted security analysis, and human-reviewed findings**.
 
-The repository intentionally separates **implemented current state** from future architecture.
+The project started from a traditional Status-Page deployment requirement and evolved into a resilient, security-focused cloud platform without changing the core application goal. The final architecture demonstrates infrastructure engineering, Kubernetes operations, cloud security, CI/CD, observability, AI governance, and failure-aware design in one end-to-end system.
+
+> AEGIS does **not** perform autonomous remediation. AI findings remain subject to human review, and automated response is intentionally kept out of scope for the validated final architecture.
 
 ---
 
 ## Project Status
 
-| Phase | Scope | Status |
-|---|---|---|
-| Phase 1 | AWS Platform Foundation | ✅ Complete |
-| Phase 2 | Security Event Pipeline | ✅ Complete |
-| Phase 3 | Investigation / AI layer | ⏳ Future |
-| Phase 4 | Governed response / remediation | ⏳ Future |
+| Capability | Status |
+|---|---|
+| AWS platform foundation | ✅ Complete |
+| EKS modernization | ✅ Complete |
+| Multi-AZ application runtime | ✅ Complete |
+| Managed PostgreSQL / Redis | ✅ Complete |
+| HTTPS / ALB / ACM / WAF | ✅ Complete |
+| Security-event pipeline | ✅ Complete |
+| AI-assisted analysis with Amazon Bedrock | ✅ Complete |
+| Human review workflow | ✅ Complete |
+| AI quality metrics | ✅ Complete |
+| Secure CI with GitHub OIDC | ✅ Complete |
+| Immutable ECR delivery | ✅ Complete |
+| GitOps delivery with Argo CD | ✅ Complete |
+| End-to-end runtime validation | ✅ Complete |
 
-Phase 2 is complete and includes working CloudTrail ingestion, normalization, Security Group detection, explicit resource-scope enforcement, deterministic incident creation, PostgreSQL persistence, continuous polling, persistent checkpoint recovery, and signal-oriented worker observability.
+The currently validated showcase environment is `eks-dev` in `us-east-1`.
+
+Public application endpoint:
+
+```text
+https://app.aegis-project.ddnsfree.com
+```
 
 ---
 
-## Current Architecture
+## Final Architecture
 
-### Platform foundation
-
-![AEGIS Foundation Network Architecture](docs/diagrams/01-aws-network-architecture.png)
-
-```text
-AWS VPC
-├── Public Application Subnet
-│   ├── Application EC2
-│   └── NAT Gateway
-│
-├── Private Database Subnet
-│   └── PostgreSQL EC2
-│
-└── Private Redis Subnet
-    └── Redis EC2
-```
-
-The application host is the only Internet-facing compute instance. PostgreSQL and Redis remain private.
-
-### Security event pipeline
-
-```text
-AWS API Activity
-      |
-      v
-CloudTrail Event History
-      |
-      | LookupEvents + pagination
-      v
-CloudTrailCollector
-      |
-      v
-CloudTrailNormalizer
-      |
-      v
-Resource Scope Policy
-      |
-      | AEGISMonitoring=enabled
-      v
-Detection Engine
-      |
-      v
-Incident Builder
-      |
-      | deterministic ID
-      v
-PostgreSQL
-```
-
-The continuous runtime wraps the pipeline with persistent recovery state:
-
-```text
-SecurityWorker
-   |
-   +--> polling cadence
-   +--> persistent checkpoint
-   +--> safety overlap
-   +--> retry after failed cycles
-   +--> health heartbeat
-   |
-   v
-SecurityEventPipeline
-```
-
-See [Architecture](docs/architecture.md) for the full implemented design.
-
----
-
-# Phase 1 — Platform Foundation ✅
-
-Phase 1 provides the infrastructure and application baseline used by AEGIS.
-
-### AWS and networking
-
-- VPC with public application and private backend subnets
-- Internet Gateway for the public tier
-- NAT Gateway for private outbound access
-- Security Groups with tier-specific ingress rules
-- Ubuntu 22.04 EC2 hosts
-- encrypted EC2 root volumes
-- IMDSv2 required
-
-### Private data services
-
-- PostgreSQL on a private EC2 instance
-- Redis on a private EC2 instance
-- no public IP addresses on backend hosts
-- application-only network access to PostgreSQL/Redis
-- SSH ProxyJump for administration of private hosts
-
-### Application runtime
+### User traffic
 
 ```text
 Internet
    |
- HTTPS :443
+ HTTPS
    v
- Nginx
+ACM Certificate
    |
-127.0.0.1:8001
-   v
-Gunicorn
+Application Load Balancer
    |
- Django
-  /    \
-Postgres Redis
+AWS WAF
+   |
+Kubernetes Ingress
+   |
+Status-Page Service
+   |
++-------------------------------+
+| EKS — private worker nodes    |
+|                               |
+|  Status-Page web replicas     |
+|  Gunicorn + unprivileged Nginx|
+|  RQ workers                   |
+|  RQ scheduler                 |
++-------------------------------+
+       |                  |
+       v                  v
+RDS PostgreSQL      ElastiCache Redis
+Multi-AZ            Multi-AZ / TLS
 ```
 
-The Django development port is not exposed publicly. Testing uses an SSH local forward.
+### Security-analysis path
 
-### Infrastructure automation
+```text
+AWS WAF
+   |
+CloudWatch metric / alarm
+   |
+EventBridge
+   |
+SQS security-events queue
+   | \
+   |  `----> Dead-letter queue
+   v
+AEGIS Analyzer on EKS
+   |
+WAF event enrichment
+   |
+Amazon Bedrock — Nova Pro
+   |
+Structured-output validation
+   |
+DynamoDB security findings
+   |
+Human analyst review
+   |
+AI quality metrics
+   v
+CloudWatch observability
+```
 
-- Terraform for AWS infrastructure
-- Ansible for host/application configuration
-- Ansible Vault for encrypted secrets
-- systemd-managed application services
-- GitHub Actions Terraform validation
+### Secure software delivery
+
+```text
+Developer
+   |
+GitHub
+   |
+GitHub Actions
+   |  temporary AWS credentials via OIDC
+   v
+Build + Trivy + CycloneDX SBOM
+   |
+Immutable ECR image
+   |
+Update GitOps image digest
+   |
+Git
+   |
+Argo CD
+   |
+EKS
+```
+
+**GitHub Actions never deploys directly to EKS.** CI publishes an immutable artifact and updates Git desired state; Argo CD owns cluster reconciliation.
 
 ---
 
-# Phase 2 — Security Event Pipeline ✅
+## What AEGIS Demonstrates
 
-Phase 2 introduces the first real AEGIS security-processing layer.
+### Cloud & Kubernetes platform engineering
 
-## Reliable CloudTrail ingestion
+- VPC `10.10.0.0/16` across two Availability Zones
+- separate public, private EKS node/Pod, control-plane, and private data subnets
+- private EKS workers with no public IPs
+- EKS Managed Node Group baseline plus validated Karpenter scaling
+- multi-AZ workload placement with topology-spread constraints
+- readiness/liveness probes, resource requests/limits, and Pod Disruption Budgets
+- restricted Kubernetes Pod Security Admission for the AEGIS namespace
+- managed PostgreSQL and Redis outside Kubernetes
 
-The collector uses CloudTrail `LookupEvents` with:
+### Application runtime
 
-- configurable lookback windows;
-- event-name filtering;
-- `NextToken` pagination;
-- bounded total results;
-- collector-noise filtering.
+- Status-Page / Django application
+- Gunicorn application server
+- unprivileged Nginx sidecar on port `8080`
+- RQ workers and scheduler
+- dedicated database migration Job executed as an Argo CD `PreSync` hook
+- runtime configuration rendered from managed configuration and secrets into an in-memory volume
 
-AEGIS does not assume that the first CloudTrail response page represents the complete event window.
+AEGIS security functionality is isolated in a native Status-Page plugin. A limited set of upstream presentation templates is intentionally overridden or modified to provide a unified AEGIS operations UI; application/security logic remains separated from upstream core logic.
 
-## Normalized security events
+### Cloud security
 
-Raw CloudTrail payloads are converted into internal event models before detection. This keeps the detection engine independent from AWS response formatting.
+- AWS WAF managed rule groups and per-IP rate limiting
+- WAF block logging and CloudWatch metrics
+- controlled XSS request validated as blocked
+- EventBridge-driven security event forwarding
+- SQS buffering and DLQ protection
+- least-privilege workload IAM through EKS Pod Identity
+- no application AWS access keys stored in Git or images
+- DynamoDB encryption, idempotent writes, and point-in-time recovery
 
-The current Security Group normalization extracts actor, source IP, resource ID, region, protocol, ports, and IPv4/IPv6 CIDRs.
+### AI-assisted security operations
 
-## Explicit resource scope
+- Amazon Bedrock with `amazon.nova-pro-v1:0`
+- untrusted telemetry treated as data, not instructions
+- structured model output parsed and validated before persistence
+- human review with `CORRECT` / `INCORRECT` verdicts
+- optional analyst correction and notes
+- conditional review updates to prevent accidental double review
+- human-verified AI quality metrics published to CloudWatch
+- small reviewed samples explicitly labeled as preliminary
 
-AEGIS uses a fail-closed monitoring boundary before detection.
+### Software supply-chain security
 
-The current EC2 Security Group scope policy requires:
-
-```text
-AEGISMonitoring=enabled
-```
-
-A missing tag, unsupported resource, unresolved resource, or failed scope validation results in denial.
-
-## Current detection rules
-
-| Rule ID | Finding | Severity |
-|---|---|---|
-| `AEGIS-AWS-SG-001` | Public SSH Exposure | HIGH |
-| `AEGIS-AWS-SG-002` | Public RDP Exposure | HIGH |
-
-The Security Group detector evaluates normalized ingress rules and can emit multiple findings from the same CloudTrail event when a rule exposes more than one monitored service.
-
-`AEGIS-AWS-SG-002` was validated end-to-end using a detached temporary Security Group:
-
-```text
-AWS API activity
-    -> CloudTrail
-    -> normalization
-    -> resource scope
-    -> detection
-    -> deterministic incident construction
-    -> PostgreSQL persistence
-```
-
-## Incident persistence and deduplication
-
-Detections become structured incidents with deterministic IDs.
-
-The processing model is deliberately **at least once**. Overlapping polling/recovery windows may replay events, while deterministic incident IDs and PostgreSQL uniqueness make persistence idempotent.
-
-```text
-same CloudTrail event
-        |
-        v
-same deterministic incident ID
-        |
-        v
-PostgreSQL PRIMARY KEY
-        |
-ON CONFLICT DO NOTHING
-        |
-        v
-one persisted incident
-```
-
-## Continuous security worker
-
-AEGIS includes a long-running worker rather than requiring an operator to manually run the processing script after every event.
-
-The worker provides:
-
-- periodic polling;
-- persistent PostgreSQL checkpoints;
-- restart recovery;
-- safety overlap for delayed events;
-- retry behavior after failed cycles;
-- graceful shutdown;
-- periodic health heartbeat.
-
-A checkpoint advances only after successful pipeline execution.
-
-## Signal-oriented observability
-
-Routine housekeeping stays at `DEBUG` while important operator signals remain visible:
-
-| Signal | Level |
-|---|---|
-| Worker lifecycle | INFO |
-| Meaningful recovery | INFO |
-| Incident summary | INFO |
-| Health heartbeat | INFO |
-| Routine polling / scope evaluation | DEBUG |
-| Scope validation failure | WARNING |
-| Polling failure | ERROR |
-
-This prevents normal polling from burying meaningful security events while still proving worker liveness.
-
-For the full Phase 2 implementation and current limitations, see [Phase 2 — Security Event Pipeline](docs/phase-2-security-event-pipeline.md).
+- GitHub OIDC instead of long-lived AWS keys
+- branch-scoped AWS trust policy
+- CI role limited to ECR delivery; no EKS access
+- immutable ECR tags and digest-based Kubernetes deployment
+- pinned base container image digest
+- multi-stage container build separating compiler/build dependencies from runtime
+- GitHub Actions pinned by commit SHA
+- Trivy vulnerability and secret scanning
+- fail-closed fixable-CRITICAL security gate
+- CycloneDX SBOM generated for the exact release image
+- safe GitOps synchronization that rejects stale workflows when newer application changes exist
 
 ---
 
-## Security Design Principles
+## Reliability & High Availability
 
-AEGIS currently follows these principles:
+AEGIS is designed to tolerate routine failures rather than assume perfect execution.
 
-- private data services remain private;
-- security monitoring scope is explicit rather than implicit;
-- scope validation fails closed;
-- event replay is safer than silently missing events;
-- persistence is idempotent;
-- worker state survives process restarts;
-- failed cycles do not advance the processing checkpoint;
-- reusable processing logic is separated from runtime lifecycle code;
-- AWS credentials are not copied from the developer environment to EC2 for the current Phase 2 runtime;
-- logs prioritize operator signal over repetitive internal activity.
+- application web tier runs multiple replicas across Availability Zones
+- Kubernetes probes remove unhealthy instances from service
+- Pod Disruption Budgets protect minimum availability during voluntary disruption
+- RDS PostgreSQL uses Multi-AZ deployment, encryption, backups, and deletion protection
+- ElastiCache Redis uses replication, automatic failover, Multi-AZ, encryption at rest, and TLS in transit
+- SQS decouples security event producers from the analyzer
+- DLQ isolates repeatedly failing events
+- analyzer acknowledges messages only after successful persistence
+- DynamoDB conditional writes make finding persistence idempotent
+- Argo CD self-heal restores declared Git state after drift
+- CI refuses stale desired-state updates instead of overwriting newer code
 
-The reasoning behind these choices is recorded in [Architecture Decisions](docs/architecture-decisions.md).
+See [Architecture Safety Enhancements](docs/architecture-safety-enhancements.md) for the failure modes and mitigations in detail.
 
 ---
 
@@ -276,112 +212,120 @@ The reasoning behind these choices is recorded in [Architecture Decisions](docs/
 
 ```text
 .
-├── aegis/
-│   ├── pyproject.toml
-│   ├── scripts/manual/
-│   ├── src/aegis/
-│   │   ├── collectors/
-│   │   ├── detection/
-│   │   ├── incidents/
-│   │   ├── models/
-│   │   ├── normalization/
-│   │   ├── pipeline/
-│   │   ├── runtime/
-│   │   ├── scope/
-│   │   ├── storage/
-│   │   └── workers/
-│   └── tests/
-│
+├── .github/workflows/             # CI and secure delivery
+├── aegis/                         # earlier CloudTrail security-processing core
+├── ansible/                       # original host configuration automation
+├── gitops/eks-dev/                # authoritative production Status-Page desired state
+├── kubernetes/                    # platform/security/validation Kubernetes resources
+├── scripts/                       # human review and AI-quality tooling
+├── status-page/                   # Status-Page application + AEGIS plugin/UI
 ├── terraform/
-│   ├── environments/dev/
-│   └── modules/
-│
-├── ansible/
-│   ├── inventories/dev/
-│   ├── playbooks/
-│   └── roles/
-│
-├── docs/
-│   ├── diagrams/
-│   └── screenshots/
-│
-└── .github/workflows/
+│   ├── environments/dev/          # original EC2 foundation
+│   ├── environments/eks-dev/      # modern EKS environment
+│   └── modules/                   # reusable infrastructure modules
+└── docs/                          # architecture, security, validation, evidence
 ```
 
-Manual scripts are development/validation entry points. Reusable AEGIS logic lives under `aegis/src/aegis/`.
+`gitops/eks-dev/` is the single authoritative production desired state for the Status-Page workload. Legacy duplicate production manifests were retired to reduce configuration drift.
 
 ---
 
-## CI and Validation
+## Key Design Decisions
 
-AEGIS Python changes are validated through GitHub Actions using Python 3.12 and the project unit-test suite.
+AEGIS deliberately favors safety over convenience:
 
-The repository also contains incremental validation evidence under `docs/screenshots/`, including:
+- **GitOps instead of direct CI deployment** — CI cannot mutate the cluster.
+- **Digest-based deployment instead of mutable tags** — the runtime artifact is exact and auditable.
+- **Human-reviewed AI instead of autonomous response** — model output is advisory until reviewed.
+- **Managed secrets instead of repository secrets** — runtime credentials are fetched or mounted at runtime.
+- **At-least-once processing plus idempotency** — replay is safer than silent event loss.
+- **Private workers and data services** — Internet exposure is concentrated at the ALB/WAF boundary.
+- **Dedicated migration Jobs** — schema changes are separated from application startup.
+- **Fail-closed CI safety checks** — unexpected ECR or Git synchronization states stop delivery.
 
-- normalized CloudTrail events;
-- public SSH detection;
-- unit-test and CI success;
-- end-to-end incident generation;
-- PostgreSQL persistence and deduplication;
-- CloudTrail pagination;
-- continuous-worker operation;
-- persistent checkpoint recovery;
-- resource-scope enforcement;
-- signal-oriented observability sanity validation.
-
-Phase 1 infrastructure validation remains documented separately.
+More rationale is documented in [Architecture Decisions](docs/architecture-decisions.md).
 
 ---
 
-## Development Runtime Boundary
+## Validation Highlights
 
-The current Phase 2 worker runs from the developer environment.
+The final validation covered:
 
-```text
-Developer WSL
-   |
-   +--> AWS profile --> AWS APIs
-   |
-   +--> SSH local forward --> private PostgreSQL
-```
+- Terraform formatting and validation
+- Ansible syntax validation
+- Python compilation
+- Kustomize rendering and Kubernetes dry-run
+- repository secret/artifact hygiene
+- secure GitHub Actions build and publish
+- Trivy production-image gate
+- CycloneDX SBOM generation
+- GitHub OIDC authentication
+- immutable ECR digest resolution
+- safe GitOps branch synchronization
+- Argo CD `Synced` and `Healthy`
+- successful `PreSync` database migration
+- GitOps digest == EKS runtime digest
+- multiple healthy Status-Page replicas
+- multi-AZ Pod placement
+- public HTTPS `/healthz` returning `200 ok`
+- WAF controlled-block behavior
+- human review and AI-quality metrics
 
-This is a development-stage architecture. A future AWS-hosted worker requires an explicit workload identity and deployment design; local AWS credentials will not be copied to the application host as a shortcut.
+See [Validation](docs/validation.md) and [Evidence Index](docs/evidence.md).
 
 ---
 
-## Current Limitations
+## Implemented Earlier Phase
 
-The repository does **not** claim that AEGIS is already a complete autonomous incident-response platform.
+The repository also retains the earlier AEGIS CloudTrail security-processing core. That phase demonstrated:
 
-Current Phase 2 limitations include:
+- paginated CloudTrail collection
+- normalization
+- explicit resource-scope enforcement
+- public SSH/RDP Security Group detection
+- deterministic incident IDs
+- idempotent PostgreSQL persistence
+- restart-safe polling checkpoints
 
-- CloudTrail polling is the active event transport;
-- detection currently focuses on Security Group ingress with public SSH and RDP exposure rules;
-- tag-based scope enforcement currently targets EC2 Security Groups;
-- the continuous worker currently runs from the development environment;
-- AI investigation and agent orchestration are not implemented;
-- automated remediation and human approval workflows are not implemented.
+It remains useful evidence of the project's evolution, while the final EKS showcase adds WAF-driven event ingestion, Bedrock analysis, managed AWS services, Kubernetes workload identity, and GitOps delivery.
 
-These are explicit phase boundaries.
+See [Phase 2 — Security Event Pipeline](docs/phase-2-security-event-pipeline.md).
+
+---
+
+## Current Boundaries / Known Limitations
+
+The final project intentionally does not claim capabilities that were not validated:
+
+- no autonomous remediation or automatic security-group changes
+- no multi-region Kubernetes or cross-region disaster recovery
+- Argo CD uses the standard non-HA installation; the dev cluster baseline has two nodes
+- Kubernetes NetworkPolicy enforcement is not claimed as active
+- Status-Page web autoscaling is not claimed; HPA behavior was validated separately on a demo workload
+- the reviewer/runtime Status-Page IAM role can be further separated into distinct operational identities
+- model quality metrics are meaningful only after enough findings receive human review
+- public Dynu DNS is appropriate for the project environment, not an enterprise DNS architecture
+
+These are documented as engineering boundaries, not hidden gaps.
 
 ---
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Security](docs/security.md)
+- [Deployment / GitOps](docs/deployment.md)
+- [Validation](docs/validation.md)
+- [Architecture Safety Enhancements](docs/architecture-safety-enhancements.md)
+- [Phase 1.1 Platform Modernization](docs/phase-1-1-platform-modernization.md)
 - [Phase 2 Security Event Pipeline](docs/phase-2-security-event-pipeline.md)
 - [Architecture Decisions](docs/architecture-decisions.md)
-- [Networking](docs/networking.md)
-- [Security](docs/security.md)
-- [Deployment](docs/deployment.md)
-- [Validation](docs/validation.md)
-- [Troubleshooting](docs/troubleshooting.md)
 - [Disaster Recovery Posture](docs/disaster-recovery.md)
+- [Evidence Index](docs/evidence.md)
+- [Submission Checklist](docs/submission-checklist.md)
 
 ---
 
-## Next Direction
+## Final Project Summary
 
-The next engineering work should build on the persisted incident layer rather than bypass it: broader detection coverage, composable resource-scope policies, production runtime identity/hosting, stronger telemetry, and eventually investigation and governed response layers.
-
-Future AI or automated-response components will be documented only when implemented.
+AEGIS demonstrates the transition from a traditional server-oriented deployment into a modern, security-focused AWS platform where **infrastructure, application delivery, security telemetry, AI analysis, human governance, and operational resilience are treated as one system**.
