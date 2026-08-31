@@ -5,8 +5,8 @@ Dashboard
 {% endblock %}
 
 {% block dashboard_content %}
-  <div>
-    <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+  <div class="ops-dashboard">
+    <dl class="ops-kpi-grid">
       {% if perms.incidents.view_incident %}
       <div class="relative overflow-hidden rounded-lg bg-white dark:bg-zinc-800 px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6">
         <dt>
@@ -74,5 +74,56 @@ Dashboard
       </div>
       {% endif %}
     </dl>
+
+    <div class="ops-workspace-grid">
+      <section class="ops-panel" aria-labelledby="ops-workspace-title">
+        <header class="ops-panel-head">
+          <div>
+            <h2 id="ops-workspace-title">Security operations workspace</h2>
+            <p>Move from signal to response across the AEGIS control plane.</p>
+          </div>
+          <a href="{% url 'plugins:aegis_review:findings' %}">Open command center <span aria-hidden="true">→</span></a>
+        </header>
+        <div class="ops-capabilities">
+          <a class="ops-capability" href="{% url 'plugins:aegis_review:findings' %}">
+            <i class="mdi mdi-shield-search-outline" aria-hidden="true"></i>
+            <span><strong>AI-assisted review</strong><span>Validate classifications, confidence and WAF evidence.</span></span>
+          </a>
+          {% if perms.incidents.view_incident %}
+          <a class="ops-capability" href="{% url 'incidents:incident_list' %}">
+            <i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i>
+            <span><strong>Incident response</strong><span>Coordinate active impact, ownership and recovery updates.</span></span>
+          </a>
+          {% endif %}
+          {% if perms.components.view_component %}
+          <a class="ops-capability" href="{% url 'components:component_list' %}">
+            <i class="mdi mdi-server-network" aria-hidden="true"></i>
+            <span><strong>Service topology</strong><span>Track critical components and operational dependencies.</span></span>
+          </a>
+          {% endif %}
+          {% if perms.extras.view_objectchange %}
+          <a class="ops-capability" href="{% url 'extras:objectchange_list' %}">
+            <i class="mdi mdi-history" aria-hidden="true"></i>
+            <span><strong>Audit timeline</strong><span>Review administrative actions and platform changes.</span></span>
+          </a>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="ops-panel" aria-labelledby="ops-posture-title">
+        <header class="ops-panel-head">
+          <div>
+            <h2 id="ops-posture-title">Security posture</h2>
+            <p>Current control-plane readiness.</p>
+          </div>
+        </header>
+        <div class="ops-posture">
+          <div class="ops-posture-row"><span>WAF telemetry</span><strong>Ingesting</strong></div>
+          <div class="ops-posture-row"><span>AI analyzer</span><strong>Available</strong></div>
+          <div class="ops-posture-row"><span>Human review</span><strong>Enforced</strong></div>
+          <div class="ops-posture-row"><span>Analyst access</span><strong>Protected</strong></div>
+        </div>
+      </section>
+    </div>
   </div>
 {% endblock %}

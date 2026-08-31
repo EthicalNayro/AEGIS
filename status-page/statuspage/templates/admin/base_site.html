@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | AEGIS Administration{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'aegis-platform.css' %}?v=1.2.0">
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} aegis-admin{% endblock %}
+
+{% block branding %}
+  <div class="aegis-admin-brand">
+    <span class="aegis-admin-shield" aria-hidden="true">A</span>
+    <span><strong>AEGIS</strong><small>Secure administration</small></span>
+  </div>
+{% endblock %}
+
+{% block nav-global %}
+  <div class="aegis-admin-links">
+    <a href="{% url 'dashboard' %}">Operations dashboard</a>
+    <a href="{% url 'plugins:aegis_review:findings' %}">Analyst console</a>
+  </div>
+{% endblock %}

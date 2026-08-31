@@ -2,10 +2,11 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>{% block title %}Home{% endblock %} | Status-Page</title>
+		<title>{% block title %}Home{% endblock %} | AEGIS Security Operations</title>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<meta name="theme-color" content="#06111f">
 
 		<link rel="icon" type="image/png" href="{% static 'logo_icon.ico' %}" />
 
@@ -13,6 +14,7 @@
     <link rel="stylesheet" href="{% static 'statuspage-external.css'%}?v={{ settings.VERSION }}" />
     <link rel="stylesheet" href="{% static 'statuspage.css'%}?v={{ settings.VERSION }}" />
     <link rel="stylesheet" href="{% static 'statuspage-ss-select-styles.css'%}?v={{ settings.VERSION }}" />
+    <link rel="stylesheet" href="{% static 'aegis-platform.css' %}?v=1.2.0" />
 
 		<script defer src="{% static 'statuspage-alpine.js' %}?v={{ settings.VERSION }}"></script>
 		<script src="{% static 'statuspage.js' %}?v={{ settings.VERSION }}"></script>
@@ -24,7 +26,7 @@
 		{% block head %}{% endblock %}
 	</head>
 
-	<body class="dark">
+	<body class="dark aegis-global">
     {# User messages #}
     {% include 'inc/messages.html' %}
 

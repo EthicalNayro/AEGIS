@@ -5,7 +5,26 @@ Login
 {% endblock %}
 
 {% block content %}
-<div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
+<div class="aegis-login">
+  <div class="aegis-login-layout">
+    <section class="aegis-login-story" aria-labelledby="aegis-login-title">
+      <div class="aegis-login-brand">
+        <span class="platform-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 28" fill="none"><path d="M12 1.5 22 5v8.1c0 6.5-4.4 11.3-10 13.4C6.4 24.4 2 19.6 2 13.1V5l10-3.5Z" stroke="currentColor" stroke-width="1.6"/><path d="m7.8 18.5 4.1-10 4.3 10M9.3 15h5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span>AEGIS</span>
+      </div>
+      <h1 id="aegis-login-title">Security operations, with human judgment at the center.</h1>
+      <p>Investigate WAF evidence, validate AI decisions, and coordinate platform response from one protected analyst workspace.</p>
+      <div class="aegis-login-signals" aria-label="Security controls">
+        <span><i class="mdi mdi-check-circle" aria-hidden="true"></i>WAF telemetry</span>
+        <span><i class="mdi mdi-check-circle" aria-hidden="true"></i>AI-assisted triage</span>
+        <span><i class="mdi mdi-check-circle" aria-hidden="true"></i>Staff-only review</span>
+      </div>
+    </section>
+
+    <section class="aegis-login-panel" aria-label="Analyst sign in">
+      <div class="aegis-login-card">
   {% if config.BANNER_LOGIN %}
     <div class="mw-90 mw-md-75 mw-lg-80 mw-xl-75 mw-xxl-50">
       {{ config.BANNER_LOGIN|safe }}
@@ -13,7 +32,7 @@ Login
   {% endif %}
 
   <div class="sm:mx-auto sm:w-full sm:max-w-md">
-    <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Status-Page</h2>
+    <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Analyst access</h2>
   </div>
 
   {% if form.non_field_errors %}
@@ -81,7 +100,11 @@ Login
           </div>
         </div>
       </form>
+      <div class="aegis-login-assurance"><i class="mdi mdi-shield-lock-outline" aria-hidden="true"></i>Protected authentication · Access is logged and monitored</div>
     </div>
+  </div>
+</div>
+    </section>
   </div>
 </div>
 {% endblock content %}

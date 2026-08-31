@@ -5,8 +5,9 @@
 {% load helpers %}
 
 {% block content %}
-  <div class="min-h-screen flex flex-col">
-    <nav class="bg-indigo-600" x-data="{
+  <div class="platform-app min-h-screen flex flex-col">
+    <a class="platform-skip-link" href="#platform-main">Skip to main content</a>
+    <nav class="platform-legacy-topbar" x-data="{
         open: false,
         close(focusAfter) {
           if (! this.open) return;
@@ -15,11 +16,14 @@
         },
       }"
     >
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="platform-topbar-inner px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center justify-between">
           <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <img class="" src="{% static 'logo.svg' %}" alt="Status-Page">
+            <div class="platform-legacy-brand flex-shrink-0">
+              <span class="platform-brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 28" fill="none"><path d="M12 1.5 22 5v8.1c0 6.5-4.4 11.3-10 13.4C6.4 24.4 2 19.6 2 13.1V5l10-3.5Z" stroke="currentColor" stroke-width="1.6"/><path d="m7.8 18.5 4.1-10 4.3 10M9.3 15h5.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span>AEGIS</span>
             </div>
             <div class="hidden md:block">
               <div class="ml-10 flex items-baseline space-x-2">
@@ -31,7 +35,7 @@
             <div class="ml-4 flex items-center md:ml-6">
               <div class="ml-3">
                 <div>
-                  <button class="color-mode-toggle text-white"><i class="color-mode-icon mdi"></i></button>
+                  <span class="platform-health"><i aria-hidden="true"></i>System Operational</span>
                 </div>
               </div>
               <!-- Profile dropdown -->
@@ -138,16 +142,20 @@
       </div>
     </nav>
 
-    <header class="bg-white shadow">
-      <div class="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
+    <header class="platform-legacy-header">
+      <div class="platform-page-header px-4 sm:px-6 lg:px-8">
         <div class="flex flex-row justify-between items-end">
-          <h1 class="text-3xl font-bold leading-tight tracking-tight text-gray-900">{% block title %}{% endblock %}</h1>
-          <div class="text-black">{% block controls %}{% endblock %}</div>
+          <div>
+            <p class="platform-eyebrow">AEGIS / SECURITY OPERATIONS</p>
+            <h1>{% block title %}{% endblock %}</h1>
+            <p class="platform-page-subtitle">Monitor platform health, investigate activity, and coordinate operational response.</p>
+          </div>
+          <div class="platform-page-controls">{% block controls %}{% endblock %}</div>
         </div>
       </div>
     </header>
-    <main class="grow">
-      <div class="mx-auto py-4 sm:px-6 lg:px-8 dark:text-white">
+    <main id="platform-main" class="platform-legacy-main grow">
+      <div class="platform-content py-4 sm:px-6 lg:px-8">
         {% if config.BANNER_TOP %}
           <div class="text-center mx-3">
             {{ config.BANNER_TOP|safe }}
@@ -165,7 +173,7 @@
         {% endif %}
       </div>
     </main>
-    <footer class="py-4 px-8 text-gray-500 dark:text-gray-300">
+    <footer class="platform-footer py-4 px-8">
       <div class="flex flex-row justify-between">
         <div class="flex flex-row space-x-2">
           <a type="button" href="{% static 'docs/' %}" target="_blank">
