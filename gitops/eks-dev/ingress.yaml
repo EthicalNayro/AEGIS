@@ -8,8 +8,14 @@ metadata:
   labels:
     app.kubernetes.io/name: aegis-demo
     app.kubernetes.io/part-of: aegis
+    aegis-external-dns: "true"
 
   annotations:
+    # ExternalDNS manages only this explicitly labeled Ingress. In dry-run mode
+    # it can plan an upsert but cannot modify Dynu until validation is complete.
+    external-dns.alpha.kubernetes.io/hostname: app.aegis-project.ddnsfree.com
+    external-dns.alpha.kubernetes.io/ttl: "120"
+
     # Public-facing AWS Application Load Balancer.
     alb.ingress.kubernetes.io/scheme: internet-facing
 
