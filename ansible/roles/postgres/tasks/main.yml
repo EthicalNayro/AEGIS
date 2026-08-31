@@ -19,7 +19,7 @@
     password: "{{ status_page_db_password }}"
     state: present
   become_user: postgres
-
+  no_log: true
 - name: Create Status-Page database
   community.postgresql.postgresql_db:
     name: "{{ status_page_db_name }}"

@@ -44,3 +44,12 @@ media/
 logs/
 
 *.egg-info/
+
+# Terraform local plan artifacts
+tfplan
+
+# Editor / temporary files
+*.swp
+*.swo
+*~
+*.bak
