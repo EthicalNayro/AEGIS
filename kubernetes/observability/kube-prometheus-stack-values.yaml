@@ -75,6 +75,16 @@ kubeStateMetrics:
 nodeExporter:
   enabled: true
 
+# Keep the observability AppProject confined to the monitoring namespace.
+# kube-prometheus-stack otherwise creates discovery Services in kube-system
+# for these components. We do not need those targets for the AEGIS project
+# dashboards, so disable them instead of broadening the GitOps trust boundary.
+coreDns:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
 # EKS manages these control-plane components and does not expose their
 # local metrics endpoints like a self-managed Kubernetes control plane.
 kubeEtcd:
