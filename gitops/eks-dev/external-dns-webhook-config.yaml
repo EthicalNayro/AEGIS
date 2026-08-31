@@ -1,0 +1,374 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegis-dynu-external-dns-webhook
+  namespace: aegis-system
+  labels:
+    app.kubernetes.io/name: aegis-external-dns
+    app.kubernetes.io/part-of: aegis
+data:
+  dynu-webhook.py: |
+    #!/usr/bin/env python3
+    import json
+    import logging
+    import os
+    import threading
+    import urllib.error
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    MEDIA_TYPE = "application/external.dns.webhook+json;version=1"
+    API_BASE = "https://api.dynu.com/v2"
+    MAX_BODY = 65536
+
+    API_KEY = os.environ["DYNU_API_KEY"]
+    ZONE = os.environ.get("DYNU_ZONE", "aegis-project.ddnsfree.com").strip(".").lower()
+    HOSTNAME = os.environ.get("DYNU_HOSTNAME", "app.aegis-project.ddnsfree.com").strip(".").lower()
+    ALLOWED_TARGET_SUFFIX = os.environ.get("DYNU_ALLOWED_TARGET_SUFFIX", ".elb.amazonaws.com").lower()
+    DEFAULT_TTL = int(os.environ.get("DYNU_DEFAULT_TTL", "120"))
+
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+    LOG = logging.getLogger("dynu-webhook")
+
+
+    def normalize_name(value):
+        return str(value or "").strip().rstrip(".").lower()
+
+
+    def pick(obj, *keys):
+        for key in keys:
+            if isinstance(obj, dict) and obj.get(key) not in (None, ""):
+                return obj[key]
+        return None
+
+
+    def as_items(data, preferred_keys):
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in preferred_keys:
+                value = data.get(key)
+                if isinstance(value, list):
+                    return value
+            for value in data.values():
+                if isinstance(value, list) and all(isinstance(x, dict) for x in value):
+                    return value
+        return []
+
+
+    class DynuClient:
+        def __init__(self):
+            self._zone_id = None
+
+        def request(self, method, path, payload=None):
+            body = None
+            headers = {
+                "accept": "application/json",
+                "API-Key": API_KEY,
+            }
+            if payload is not None:
+                body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+                headers["Content-Type"] = "application/json"
+
+            request = urllib.request.Request(
+                API_BASE + path,
+                data=body,
+                headers=headers,
+                method=method,
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=4) as response:
+                    raw = response.read()
+                    if not raw:
+                        return None
+                    return json.loads(raw.decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                detail = exc.read(2048).decode("utf-8", "replace")
+                raise RuntimeError(
+                    f"Dynu API {method} {path} failed with HTTP {exc.code}: {detail[:500]}"
+                ) from exc
+            except urllib.error.URLError as exc:
+                raise RuntimeError(f"Dynu API {method} {path} failed: {exc.reason}") from exc
+
+        def zone_id(self):
+            if self._zone_id is not None:
+                return self._zone_id
+
+            data = self.request("GET", "/dns")
+            zones = as_items(data, ("domains", "dns", "items", "data"))
+            for zone in zones:
+                candidate = normalize_name(
+                    pick(zone, "name", "hostname", "domainName", "domain_name", "domain")
+                )
+                if candidate == ZONE:
+                    zone_id = pick(zone, "id", "domainId", "domain_id")
+                    if zone_id is None:
+                        break
+                    self._zone_id = str(zone_id)
+                    LOG.info("Resolved Dynu DNS service for zone %s", ZONE)
+                    return self._zone_id
+
+            raise RuntimeError(f"Dynu DNS service for zone {ZONE!r} was not found")
+
+        def records(self):
+            data = self.request("GET", f"/dns/{self.zone_id()}/record")
+            return as_items(data, ("dnsRecords", "records", "items", "data"))
+
+        def managed_records(self):
+            managed = []
+            for record in self.records():
+                record_hostname = normalize_name(
+                    pick(record, "hostname", "hostName", "fqdn")
+                )
+                record_type = str(
+                    pick(record, "recordType", "record_type", "type") or ""
+                ).upper()
+                state = pick(record, "state", "enabled")
+                if (
+                    record_hostname == HOSTNAME
+                    and record_type == "CNAME"
+                    and state is not False
+                ):
+                    managed.append(record)
+            return managed
+
+        def endpoints(self):
+            endpoints = []
+            for record in self.managed_records():
+                target = normalize_name(pick(record, "host", "content", "target", "cname"))
+                if not target:
+                    continue
+                ttl = int(pick(record, "ttl") or DEFAULT_TTL)
+                endpoints.append(
+                    {
+                        "dnsName": HOSTNAME,
+                        "targets": [target],
+                        "recordType": "CNAME",
+                        "recordTTL": ttl,
+                    }
+                )
+            return endpoints
+
+        def _node_name(self):
+            if HOSTNAME == ZONE:
+                return ""
+            suffix = "." + ZONE
+            if not HOSTNAME.endswith(suffix):
+                raise RuntimeError(f"{HOSTNAME} is outside Dynu zone {ZONE}")
+            return HOSTNAME[: -len(suffix)]
+
+        def _validate_endpoint(self, endpoint):
+            dns_name = normalize_name(endpoint.get("dnsName"))
+            record_type = str(endpoint.get("recordType") or "").upper()
+            targets = endpoint.get("targets") or []
+
+            if dns_name != HOSTNAME:
+                raise ValueError(f"refusing unmanaged hostname {dns_name!r}")
+            if record_type != "CNAME":
+                raise ValueError(f"refusing unmanaged record type {record_type!r}")
+            if len(targets) != 1:
+                raise ValueError("managed CNAME must have exactly one target")
+
+            target = normalize_name(targets[0])
+            if not target.endswith(ALLOWED_TARGET_SUFFIX):
+                raise ValueError(
+                    f"refusing CNAME target outside allowed suffix {ALLOWED_TARGET_SUFFIX!r}"
+                )
+
+            ttl = int(endpoint.get("recordTTL") or DEFAULT_TTL)
+            if ttl < 60 or ttl > 86400:
+                raise ValueError(f"TTL {ttl} is outside the allowed 60..86400 range")
+
+            return target, ttl
+
+        def upsert(self, endpoint):
+            target, ttl = self._validate_endpoint(endpoint)
+            payload = {
+                "nodeName": self._node_name(),
+                "recordType": "CNAME",
+                "ttl": ttl,
+                "state": True,
+                "host": target,
+            }
+
+            records = self.managed_records()
+            if len(records) > 1:
+                raise RuntimeError(
+                    f"refusing to modify {HOSTNAME}: multiple Dynu CNAME records exist"
+                )
+
+            if records:
+                record = records[0]
+                record_id = pick(record, "id", "dnsRecordId", "dns_record_id")
+                if record_id is None:
+                    raise RuntimeError("existing Dynu record has no record id")
+
+                current_target = normalize_name(
+                    pick(record, "host", "content", "target", "cname")
+                )
+                current_ttl = int(pick(record, "ttl") or DEFAULT_TTL)
+                if current_target == target and current_ttl == ttl:
+                    LOG.info("Dynu CNAME already matches desired state for %s", HOSTNAME)
+                    return
+
+                self.request(
+                    "POST",
+                    f"/dns/{self.zone_id()}/record/{record_id}",
+                    payload,
+                )
+                LOG.info("Updated Dynu CNAME for %s", HOSTNAME)
+                return
+
+            self.request("POST", f"/dns/{self.zone_id()}/record", payload)
+            LOG.info("Created Dynu CNAME for %s", HOSTNAME)
+
+
+    CLIENT = DynuClient()
+
+
+    class ProviderHandler(BaseHTTPRequestHandler):
+        server_version = "aegis-dynu-webhook/1"
+
+        def log_message(self, fmt, *args):
+            LOG.debug("%s - %s", self.address_string(), fmt % args)
+
+        def _send_json(self, status, obj):
+            payload = json.dumps(obj, separators=(",", ":")).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", MEDIA_TYPE)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def _send_empty(self, status):
+            self.send_response(status)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def _require_media(self):
+            accept = self.headers.get("Accept", "")
+            return (
+                not accept
+                or "*/*" in accept
+                or "application/external.dns.webhook+json" in accept
+            )
+
+        def _read_json(self):
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+            except ValueError as exc:
+                raise ValueError("invalid Content-Length") from exc
+            if size <= 0 or size > MAX_BODY:
+                raise ValueError("request body size is invalid")
+            raw = self.rfile.read(size)
+            return json.loads(raw.decode("utf-8"))
+
+        def do_GET(self):
+            try:
+                if not self._require_media():
+                    self._send_empty(406)
+                    return
+                if self.path == "/":
+                    self._send_json(200, {"filters": [HOSTNAME]})
+                    return
+                if self.path == "/records":
+                    self._send_json(200, CLIENT.endpoints())
+                    return
+                if self.path == "/healthz":
+                    CLIENT.zone_id()
+                    self._send_empty(200)
+                    return
+                self._send_empty(404)
+            except Exception as exc:
+                LOG.error("GET %s failed: %s", self.path, exc)
+                self._send_json(500, {"error": str(exc)})
+
+        def do_POST(self):
+            try:
+                if not self._require_media():
+                    self._send_empty(406)
+                    return
+                body = self._read_json()
+
+                if self.path == "/adjustendpoints":
+                    if not isinstance(body, list):
+                        raise ValueError("adjustendpoints payload must be an array")
+                    self._send_json(200, body)
+                    return
+
+                if self.path == "/records":
+                    if not isinstance(body, dict):
+                        raise ValueError("changes payload must be an object")
+
+                    deletes = body.get("delete") or body.get("Delete") or []
+                    if deletes:
+                        self._send_json(
+                            409,
+                            {"error": "delete operations are disabled by AEGIS policy"},
+                        )
+                        return
+
+                    creates = body.get("create") or body.get("Create") or []
+                    update_new = body.get("updateNew") or body.get("UpdateNew") or []
+
+                    for endpoint in creates:
+                        CLIENT.upsert(endpoint)
+                    for endpoint in update_new:
+                        CLIENT.upsert(endpoint)
+
+                    self._send_empty(204)
+                    return
+
+                self._send_empty(404)
+            except ValueError as exc:
+                LOG.warning("Rejected POST %s: %s", self.path, exc)
+                self._send_json(400, {"error": str(exc)})
+            except Exception as exc:
+                LOG.error("POST %s failed: %s", self.path, exc)
+                self._send_json(500, {"error": str(exc)})
+
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        server_version = "aegis-dynu-webhook-health/1"
+
+        def log_message(self, fmt, *args):
+            LOG.debug("%s - %s", self.address_string(), fmt % args)
+
+        def do_GET(self):
+            if self.path != "/healthz":
+                self.send_response(404)
+                self.end_headers()
+                return
+            try:
+                CLIENT.zone_id()
+                payload = b"ok\n"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+            except Exception as exc:
+                LOG.error("health check failed: %s", exc)
+                self.send_response(503)
+                self.end_headers()
+
+
+    def main():
+        if not HOSTNAME.endswith("." + ZONE) and HOSTNAME != ZONE:
+            raise SystemExit(f"DYNU_HOSTNAME {HOSTNAME!r} is outside DYNU_ZONE {ZONE!r}")
+
+        provider = ThreadingHTTPServer(("127.0.0.1", 8888), ProviderHandler)
+        health = ThreadingHTTPServer(("0.0.0.0", 8080), HealthHandler)
+
+        thread = threading.Thread(target=health.serve_forever, daemon=True)
+        thread.start()
+
+        LOG.info("Dynu webhook ready for exactly %s via zone %s", HOSTNAME, ZONE)
+        provider.serve_forever()
+
+
+    if __name__ == "__main__":
+        main()
