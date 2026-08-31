@@ -6,11 +6,9 @@ locals {
     az => index
   }
 
-  # Development can use one NAT Gateway to reduce cost.
-  # Setting single_nat_gateway=false creates one NAT Gateway per AZ.
-  nat_azs = var.single_nat_gateway ? {
-    (var.availability_zones[0]) = 0
-  } : local.az_index
+  # High Availability:
+  # Create one NAT Gateway per Availability Zone.
+  nat_azs = local.az_index
 }
 
 
@@ -81,6 +79,13 @@ resource "aws_subnet" "eks_cluster" {
 
 # ==================================================
 # Private EKS Node / Pod Subnets
+#
+# These subnets are used by:
+# - EKS Managed Node Groups
+# - Karpenter dynamically provisioned worker nodes
+#
+# The karpenter.sh/discovery tag allows Karpenter
+# to discover only these private worker subnets.
 # ==================================================
 
 resource "aws_subnet" "private_eks" {
@@ -95,6 +100,7 @@ resource "aws_subnet" "private_eks" {
     Name                              = "${local.name_prefix}-private-eks-${each.value + 1}"
     Tier                              = "private-eks"
     "kubernetes.io/role/internal-elb" = "1"
+    "karpenter.sh/discovery"          = var.cluster_name
   }
 }
 
@@ -102,6 +108,9 @@ resource "aws_subnet" "private_eks" {
 # ==================================================
 # Private Data Subnets
 # RDS / ElastiCache
+#
+# These subnets are intentionally NOT tagged for
+# Karpenter discovery.
 # ==================================================
 
 resource "aws_subnet" "private_data" {
@@ -149,6 +158,12 @@ resource "aws_route_table_association" "public" {
 
 # ==================================================
 # NAT Gateways
+#
+# High Availability design:
+# One Elastic IP and one NAT Gateway per Availability Zone.
+#
+# Each private EKS subnet uses the NAT Gateway located
+# in the same Availability Zone.
 # ==================================================
 
 resource "aws_eip" "nat" {
@@ -180,6 +195,17 @@ resource "aws_nat_gateway" "this" {
 
 # ==================================================
 # Private EKS Node Routing
+#
+# Each private EKS subnet routes Internet-bound traffic
+# through the NAT Gateway in its own Availability Zone.
+#
+# Example:
+#
+# us-east-1a private subnet -> NAT Gateway us-east-1a
+# us-east-1b private subnet -> NAT Gateway us-east-1b
+#
+# This prevents a single NAT Gateway / AZ from becoming
+# a single point of failure for EKS worker nodes.
 # ==================================================
 
 resource "aws_route_table" "private_eks" {
@@ -198,12 +224,7 @@ resource "aws_route" "private_eks_internet" {
 
   route_table_id         = aws_route_table.private_eks[each.key].id
   destination_cidr_block = "0.0.0.0/0"
-
-  nat_gateway_id = var.single_nat_gateway ? (
-    aws_nat_gateway.this[var.availability_zones[0]].id
-    ) : (
-    aws_nat_gateway.this[each.key].id
-  )
+  nat_gateway_id         = aws_nat_gateway.this[each.key].id
 }
 
 

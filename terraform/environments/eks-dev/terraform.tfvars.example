@@ -27,6 +27,11 @@ private_data_subnet_cidrs = [
   "10.10.65.0/24",
 ]
 
+deployment_role_arn = "arn:aws:iam::992382545251:role/aegis-project-role"
+
+cluster_endpoint_public_access_cidrs = [
+  "79.177.147.179/32"
+]
 # true:
 #   one NAT Gateway for the development environment.
 #
