@@ -1,9 +1,13 @@
+import math
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
-from statuspage.views.dashboard import get_aegis_dashboard_context
+from statuspage.views.dashboard import (
+    build_radar_points,
+    get_aegis_dashboard_context,
+)
 
 
 @override_settings(PLUGINS=["aegis_review"])
@@ -67,6 +71,10 @@ class AegisDashboardContextTests(SimpleTestCase):
             ],
             ["INC-3", "INC-2", "INC-1"],
         )
+        self.assertEqual(
+            [point["incident_id"] for point in context["aegis_radar_points"]],
+            ["INC-3"],
+        )
 
     def test_non_staff_dashboard_never_scans_security_findings(self):
         request = SimpleNamespace(
@@ -82,3 +90,47 @@ class AegisDashboardContextTests(SimpleTestCase):
         scan.assert_not_called()
         self.assertTrue(context["aegis_restricted"])
         self.assertFalse(context["aegis_data_available"])
+
+    def test_pending_findings_are_mapped_to_severity_distance_bands(self):
+        findings = [
+            {
+                "incident_id": "INC-CRITICAL",
+                "review_status": "PENDING_REVIEW",
+                "severity": "CRITICAL",
+            },
+            {
+                "incident_id": "INC-HIGH",
+                "review_status": "PENDING_REVIEW",
+                "severity": "HIGH",
+            },
+            {
+                "incident_id": "INC-MEDIUM",
+                "review_status": "PENDING_REVIEW",
+                "severity": "MEDIUM",
+            },
+            {
+                "incident_id": "INC-REVIEWED",
+                "review_status": "REVIEWED",
+                "severity": "CRITICAL",
+            },
+            {
+                "incident_id": "INC-LOW",
+                "review_status": "PENDING_REVIEW",
+                "severity": "LOW",
+            },
+        ]
+
+        points = build_radar_points(findings)
+
+        self.assertEqual(len(points), 3)
+        distances = {
+            point["severity"]: math.hypot(
+                point["x"] - 50,
+                point["y"] - 50,
+            )
+            for point in points
+        }
+        self.assertLessEqual(distances["CRITICAL"], 16.2)
+        self.assertGreaterEqual(distances["HIGH"], 21.8)
+        self.assertLessEqual(distances["HIGH"], 31.2)
+        self.assertGreaterEqual(distances["MEDIUM"], 35.8)

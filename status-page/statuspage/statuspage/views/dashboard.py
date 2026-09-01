@@ -1,4 +1,6 @@
+import hashlib
 import logging
+import math
 
 from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
@@ -21,6 +23,57 @@ __all__ = (
 logger = logging.getLogger(__name__)
 
 
+RADAR_SEVERITY_BANDS = {
+    'CRITICAL': (8, 16),
+    'HIGH': (22, 31),
+    'MEDIUM': (36, 44),
+}
+
+
+def build_radar_points(findings, limit=12):
+    """Map pending findings to stable severity bands on the radar."""
+
+    points = []
+
+    for finding in findings:
+        severity = finding.get('severity', '').upper()
+
+        if (
+            finding.get('review_status') != 'PENDING_REVIEW'
+            or severity not in RADAR_SEVERITY_BANDS
+        ):
+            continue
+
+        incident_id = str(finding.get('incident_id', 'Unknown finding'))
+        digest = hashlib.sha256(
+            f'{incident_id}:{severity}'.encode('utf-8')
+        ).digest()
+        angle = (
+            int.from_bytes(digest[:2], 'big')
+            / 65535
+            * math.tau
+        )
+        minimum_radius, maximum_radius = RADAR_SEVERITY_BANDS[severity]
+        radius = minimum_radius + (
+            digest[2]
+            / 255
+            * (maximum_radius - minimum_radius)
+        )
+
+        points.append({
+            'incident_id': incident_id,
+            'severity': severity,
+            'x': round(50 + math.cos(angle) * radius, 1),
+            'y': round(50 + math.sin(angle) * radius, 1),
+            'delay': round(-(digest[3] / 255 * 4), 2),
+        })
+
+        if len(points) >= limit:
+            break
+
+    return points
+
+
 def get_aegis_dashboard_context(request):
     """Build a resilient, staff-only snapshot for the operations dashboard."""
 
@@ -37,6 +90,7 @@ def get_aegis_dashboard_context(request):
         'aegis_critical_count': 0,
         'aegis_review_completion': 0,
         'aegis_recent_findings': [],
+        'aegis_radar_points': [],
         'aegis_platform_dashboard': None,
     }
 
@@ -94,6 +148,7 @@ def get_aegis_dashboard_context(request):
         else 100
     )
     context['aegis_recent_findings'] = findings[:5]
+    context['aegis_radar_points'] = build_radar_points(findings)
 
     return context
 

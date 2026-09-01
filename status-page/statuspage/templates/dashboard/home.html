@@ -24,19 +24,37 @@
           <span><i class="mdi mdi-kubernetes" aria-hidden="true"></i> aegis-system</span>
         </div>
       </div>
-      <div class="ops-radar-wrap" aria-label="Analyst review completion {{ aegis_review_completion }} percent">
-        <div class="ops-radar" aria-hidden="true">
-          <span class="ops-radar-ring ops-radar-ring-one"></span>
-          <span class="ops-radar-ring ops-radar-ring-two"></span>
+      <div class="ops-radar-wrap" aria-label="{{ aegis_pending_count }} security alerts awaiting analyst review">
+        <div class="ops-radar {% if aegis_pending_count %}is-active{% else %}is-clear{% endif %}">
+          <span class="ops-radar-zone is-medium" aria-hidden="true"></span>
+          <span class="ops-radar-zone is-high" aria-hidden="true"></span>
+          <span class="ops-radar-zone is-critical" aria-hidden="true"></span>
           <span class="ops-radar-axis ops-radar-axis-x"></span>
           <span class="ops-radar-axis ops-radar-axis-y"></span>
-          <span class="ops-radar-sweep"></span>
-          <span class="ops-radar-target"></span>
+          <span class="ops-radar-sweep" aria-hidden="true"></span>
+          <span class="ops-radar-core" aria-hidden="true"></span>
+          {% for point in aegis_radar_points %}
+            <a
+              class="ops-radar-point is-{{ point.severity|lower }}"
+              href="{% url 'plugins:aegis_review:finding_detail' point.incident_id %}"
+              style="--point-x: {{ point.x }}%; --point-y: {{ point.y }}%; --point-delay: {{ point.delay }}s"
+              aria-label="Open {{ point.severity|lower }} finding {{ point.incident_id }}"
+              title="{{ point.incident_id }} · {{ point.severity }}"
+            ><span class="sr-only">{{ point.incident_id }} · {{ point.severity }}</span></a>
+          {% endfor %}
+        </div>
+        <div class="ops-radar-legend" aria-label="Radar severity zones">
+          <span class="is-critical"><i aria-hidden="true"></i>Critical</span>
+          <span class="is-high"><i aria-hidden="true"></i>High</span>
+          <span class="is-medium"><i aria-hidden="true"></i>Medium</span>
         </div>
         <div class="ops-radar-caption">
-          {% if aegis_data_available %}
-            <strong>{{ aegis_review_completion }}%</strong>
-            <span>review completion</span>
+          {% if aegis_data_available and aegis_pending_count %}
+            <strong>{{ aegis_pending_count }}</strong>
+            <span>untreated alert{{ aegis_pending_count|pluralize }}</span>
+          {% elif aegis_data_available %}
+            <i class="mdi mdi-shield-check-outline" aria-hidden="true"></i>
+            <span>review queue clear</span>
           {% elif aegis_restricted %}
             <i class="mdi mdi-lock-outline" aria-hidden="true"></i>
             <span>analyst access required</span>

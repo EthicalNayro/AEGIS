@@ -443,28 +443,100 @@ body.aegis-admin .button,body.aegis-admin input[type="submit"],body.aegis-admin 
   background: radial-gradient(circle, rgba(34, 211, 238, .08), rgba(2, 13, 24, .18) 68%);
   box-shadow: 0 0 45px rgba(34, 211, 238, .09), inset 0 0 35px rgba(34, 211, 238, .05);
 }
-.ops-radar-ring,.ops-radar-axis,.ops-radar-sweep,.ops-radar-target { position: absolute; }
-.ops-radar-ring { inset: 24%; border: 1px solid rgba(34, 211, 238, .19); border-radius: 50%; }
-.ops-radar-ring-two { inset: 40%; }
+.ops-radar-zone,.ops-radar-axis,.ops-radar-sweep,.ops-radar-core,.ops-radar-point { position: absolute; }
+.ops-radar-zone { border: 1px solid; border-radius: 50%; pointer-events: none; }
+.ops-radar-zone.is-medium { inset: 5%; border-color: rgba(250, 204, 21, .19); background: rgba(250, 204, 21, .012); }
+.ops-radar-zone.is-high { inset: 19%; border-color: rgba(251, 146, 60, .22); background: rgba(251, 146, 60, .014); }
+.ops-radar-zone.is-critical { inset: 34%; border-color: rgba(248, 91, 91, .27); background: rgba(248, 91, 91, .018); }
 .ops-radar-axis-x { top: 50%; right: 8%; left: 8%; height: 1px; background: rgba(34, 211, 238, .18); }
 .ops-radar-axis-y { top: 8%; bottom: 8%; left: 50%; width: 1px; background: rgba(34, 211, 238, .18); }
 .ops-radar-sweep {
-  inset: 50% 50% 0 0;
-  transform-origin: 100% 0;
-  background: conic-gradient(from 270deg at 100% 0, rgba(34, 211, 238, .28), transparent 22deg);
-  animation: ops-radar-sweep 7s linear infinite;
+  inset: 0;
+  border-radius: 50%;
+  transform-origin: 50% 50%;
+  background: conic-gradient(from 270deg, transparent 0deg 323deg, rgba(34, 211, 238, .025) 333deg, rgba(34, 211, 238, .17) 357deg, rgba(121, 238, 250, .46) 359deg, transparent 360deg);
+  opacity: .12;
+  pointer-events: none;
 }
-.ops-radar-target {
-  top: 29%;
-  right: 27%;
-  width: 7px;
-  height: 7px;
+.ops-radar.is-active .ops-radar-sweep { opacity: 1; animation: ops-radar-sweep 5.5s linear infinite; }
+.ops-radar-sweep::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44%;
+  height: 1px;
+  transform: translateY(-50%);
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, rgba(110, 231, 246, .15), #67e8f9);
+  box-shadow: 0 0 8px rgba(34, 211, 238, .72);
+  content: "";
+}
+.ops-radar-core {
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
   border: 1px solid #8cf2fc;
   border-radius: 50%;
   background: #22d3ee;
   box-shadow: 0 0 0 5px rgba(34, 211, 238, .08), 0 0 14px #22d3ee;
 }
+.ops-radar.is-clear .ops-radar-core {
+  border-color: #a7f3d0;
+  background: #34d399;
+  box-shadow: 0 0 0 5px rgba(52, 211, 153, .08), 0 0 14px rgba(52, 211, 153, .72);
+}
+.ops-radar-point {
+  top: var(--point-y);
+  left: var(--point-x);
+  z-index: 3;
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: #facc15;
+  background: currentColor;
+  animation: ops-radar-pulse 2.2s ease-in-out infinite;
+  animation-delay: var(--point-delay, 0s);
+}
+.ops-radar-point.is-critical { color: #f85b5b; box-shadow: 0 0 14px rgba(248, 91, 91, .9); }
+.ops-radar-point.is-high { color: #fb923c; box-shadow: 0 0 14px rgba(251, 146, 60, .85); }
+.ops-radar-point.is-medium { color: #facc15; box-shadow: 0 0 14px rgba(250, 204, 21, .78); }
+.ops-radar-point:hover { z-index: 4; transform: translate(-50%, -50%) scale(1.35); }
+.ops-radar-point:focus-visible { z-index: 5; outline: 2px solid #fff; outline-offset: 3px; transform: translate(-50%, -50%) scale(1.35); }
 @keyframes ops-radar-sweep { to { transform: rotate(360deg); } }
+@keyframes ops-radar-pulse {
+  0%, 100% { opacity: .72; }
+  50% { opacity: 1; box-shadow: 0 0 0 6px transparent, 0 0 18px currentColor; }
+}
+.ops-radar-legend {
+  position: absolute;
+  top: .8rem;
+  left: 50%;
+  display: flex;
+  z-index: 4;
+  align-items: center;
+  gap: .55rem;
+  transform: translateX(-50%);
+  color: #8198ad;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ops-radar-legend span { display: inline-flex; align-items: center; gap: .22rem; }
+.ops-radar-legend i { width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.ops-radar-legend span.is-critical { color: #f85b5b; }
+.ops-radar-legend span.is-high { color: #fb923c; }
+.ops-radar-legend span.is-medium { color: #facc15; }
+.ops-radar-legend span i { background: currentColor; }
+.ops-radar-legend i.is-critical { color: #f85b5b; background: currentColor; }
+.ops-radar-legend i.is-high { color: #fb923c; background: currentColor; }
+.ops-radar-legend i.is-medium { color: #facc15; background: currentColor; }
 .ops-radar-caption {
   position: absolute;
   bottom: 1.15rem;
