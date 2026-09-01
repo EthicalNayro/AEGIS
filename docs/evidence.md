@@ -1,154 +1,173 @@
 # Evidence Index
 
-This index maps major AEGIS claims to the validation evidence collected during implementation. The repository already contains historical Phase 1/Phase 2 screenshots under `docs/screenshots/`; later EKS/GitOps milestones used the numbered evidence convention below during final validation.
+This index maps AEGIS claims to captured or reproducible proof. It deliberately distinguishes **runtime validation**, **captured screenshots**, and **presentation evidence still waiting to be copied into the repository**.
+
+A filename in this document is not itself proof. Screenshot evidence is considered captured only when the corresponding file exists under `docs/screenshots/`.
+
+---
+
+## Final Acceptance
+
+The accepted final gate is:
+
+```bash
+bash scripts/final-acceptance.sh
+```
+
+Validated result:
+
+```text
+AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)
+```
+
+The exact 12 checks and their scope are recorded in [`final-acceptance.md`](final-acceptance.md).
+
+This means the **runtime is technically accepted**. Any screenshot marked pending below is an evidence-packaging task, not an unresolved runtime blocker.
 
 ---
 
 ## Platform / GitOps Milestones
 
-| Evidence | What it proves |
-|---|---|
-| [`83-aegis-argocd-gitops-synced-healthy.png`](screenshots/83-aegis-argocd-gitops-synced-healthy.png) | Argo CD Application reached `Synced` and `Healthy` |
-| `84` drift/self-heal evidence | Argo CD reconciles runtime drift back to Git desired state |
-| [`85-aegis-secure-ci-oidc-ecr-gitops.png`](screenshots/85-aegis-secure-ci-oidc-ecr-gitops.png) | secure CI path, GitHub OIDC, ECR delivery, GitOps digest update, and digest-match proof |
-| [`86-aegis-argocd-presync-database-migration.png`](screenshots/86-aegis-argocd-presync-database-migration.png) | database migration Job completed successfully as an Argo CD `PreSync` hook |
-| [`87-aegis-sbom-idempotent-ci-rerun.png`](screenshots/87-aegis-sbom-idempotent-ci-rerun.png) | CycloneDX SBOM generation, safe rerun/idempotent ECR behavior, and GitOps synchronization |
-| [`88-aegis-multistage-runtime-hardening.png`](screenshots/88-aegis-multistage-runtime-hardening.png) | multi-stage container build rolled out to healthy application replicas |
-| [`89-aegis-final-gitops-runtime-verification.png`](screenshots/89-aegis-final-gitops-runtime-verification.png) | final GitOps/runtime verification: Argo status, digest consistency, replicas, multi-AZ placement, and HTTPS health |
-| [`90-aegis-prometheus-grafana-gitops-synced.png`](screenshots/90-aegis-prometheus-grafana-gitops-synced.png) | Prometheus and Grafana observability application reached GitOps `Synced` / `Healthy` state |
-| [`91-aegis-grafana-kubernetes-observability.png`](screenshots/91-aegis-grafana-kubernetes-observability.png) | live Kubernetes dashboards for the `aegis-system` namespace |
-| `92-aegis-platform-health-dashboard.png` | custom AEGIS Platform Health dashboard and corrected health semantics |
-| `93-aegis-external-dns-dynu-dry-run.png` | namespace-scoped ExternalDNS discovered only the intended AEGIS record in dry-run mode |
-| [`94-aegis-security-command-center.png`](screenshots/94-aegis-security-command-center.png) | deployed analyst command center with KPIs, filters, confidence, severity, status, and case navigation |
-
-Where a screenshot has not yet been copied into `docs/screenshots/`, the filename above records the evidence naming convention used during project validation. Do not treat the index itself as a substitute for the original captured evidence.
+| Evidence | Status | What it proves |
+|---|---|---|
+| [`83-aegis-argocd-gitops-synced-healthy.png`](screenshots/83-aegis-argocd-gitops-synced-healthy.png) | ✅ captured | Argo CD reached `Synced / Healthy` during the application milestone |
+| `84` drift/self-heal evidence | ✅ historical | Argo CD reconciled runtime drift back to Git desired state |
+| [`85-aegis-secure-ci-oidc-ecr-gitops.png`](screenshots/85-aegis-secure-ci-oidc-ecr-gitops.png) | ✅ captured | OIDC, ECR delivery, security gates, and GitOps digest update |
+| [`86-aegis-argocd-presync-database-migration.png`](screenshots/86-aegis-argocd-presync-database-migration.png) | ✅ captured | database migration succeeded as Argo CD `PreSync` |
+| [`87-aegis-sbom-idempotent-ci-rerun.png`](screenshots/87-aegis-sbom-idempotent-ci-rerun.png) | ✅ captured | CycloneDX SBOM and safe/idempotent CI rerun behavior |
+| [`88-aegis-multistage-runtime-hardening.png`](screenshots/88-aegis-multistage-runtime-hardening.png) | ✅ captured | multi-stage runtime image and healthy rollout |
+| [`89-aegis-final-gitops-runtime-verification.png`](screenshots/89-aegis-final-gitops-runtime-verification.png) | ✅ captured | historical GitOps/runtime acceptance before later observability/DNS additions |
+| [`90-aegis-prometheus-grafana-gitops-synced.png`](screenshots/90-aegis-prometheus-grafana-gitops-synced.png) | ✅ captured | observability application reached GitOps `Synced / Healthy` |
+| [`91-aegis-grafana-kubernetes-observability.png`](screenshots/91-aegis-grafana-kubernetes-observability.png) | ✅ captured | live Kubernetes telemetry for `aegis-system` |
+| `92-aegis-grafana-platform-health-dashboard.png` | ⏳ file copy pending | final corrected AEGIS Platform Health dashboard |
+| `93-aegis-externaldns-dynu-dry-run.png` | ⏳ screenshot capture/copy pending | ExternalDNS/Dynu dry-run proof; runtime checks already passed |
+| [`94-aegis-security-command-center.png`](screenshots/94-aegis-security-command-center.png) | ✅ captured | deployed analyst command center and case navigation |
+| `95-aegis-final-acceptance-12-checks.png` | ⏳ screenshot copy pending | the successful final `12/12` acceptance output |
 
 ---
 
 ## Final Runtime Proof
 
-The final runtime acceptance check verified all of the following in one sequence:
+The accepted final sequence verifies:
 
 ```text
-Git remote desired state
-        |
-        v
-Argo CD Synced + Healthy
-        |
-        v
-EKS Deployment image
-        |
-        | exact sha256 digest match
-        v
-Multiple Ready Pods
-        |
-        v
-Separate Availability Zones
-        |
-        v
+Git desired state
+   |
+   v
+Argo CD: application + observability Synced / Healthy
+   |
+   v
+Status-Page + ExternalDNS rollouts complete
+   |
+   +--> ExternalDNS stays --dry-run
+   +--> least-privilege RBAC proven
+   |
+   v
+GitOps sha256 digest == all Status-Page application-image digests
+   |
+   v
+Multiple Ready replicas across Availability Zones
+   |
+   v
 Public HTTPS /healthz -> 200 ok
 ```
 
-Final deployed Status-Page digest at validation time:
+The final acceptance script checks the immutable digest used by:
 
-```text
-sha256:f372d341d45df682342eead5ccc19fd3534273ef9f88bba6197d210f2e334076
-```
+- `gunicorn`;
+- `render-configuration` init container;
+- `collect-static` init container.
 
-This digest is useful as historical evidence for the final validation run; future documentation-only commits do not imply a new application image.
-
-Later UI and secured-observability releases intentionally produced newer immutable images. The historical digest above remains evidence for its named acceptance run rather than a claim that it is the current runtime digest.
-
-![Final GitOps and runtime verification](screenshots/89-aegis-final-gitops-runtime-verification.png)
+This is stronger than comparing only one container field.
 
 ---
 
-## Secure CI Proof
+## Secure CI / Supply Chain
 
-Final successful Status-Page workflow:
-
-```text
-Workflow: AEGIS Status-Page Secure CI
-Run:      33380244538
-Result:   success
-Source:   b815930713e39ac5f7727ad431ad82d5e535e4f6
-```
-
-The successful run included:
-
-- source and renderer validation;
-- container build;
-- Trivy report;
-- Trivy CRITICAL gate;
-- GitHub OIDC authentication;
-- ECR publish;
-- production-image scan;
-- CycloneDX SBOM;
-- immutable digest resolution;
-- safe GitOps branch synchronization;
-- desired-state update/commit.
-
-The resulting GitOps bot commit was:
+Validated CI behavior includes:
 
 ```text
-cff74a1 chore(gitops): deploy git-b815930713e3 [skip ci]
+source validation
+ -> container build
+ -> Trivy report + fail-closed CRITICAL gate
+ -> GitHub OIDC authentication
+ -> immutable ECR delivery
+ -> production-image validation
+ -> CycloneDX SBOM
+ -> immutable digest resolution
+ -> guarded GitOps update
+ -> Argo reconciliation
 ```
 
-![Secure CI, OIDC, ECR, and GitOps evidence](screenshots/85-aegis-secure-ci-oidc-ecr-gitops.png)
+A stale workflow was prevented from overwriting newer desired state, proving that the GitOps race guard fails closed. Safe reruns also reuse the exact existing immutable commit image.
+
+Third-party GitHub Actions are pinned by commit SHA across the active CI workflows. Terraform CI validates both the original `dev` environment and the final `eks-dev` environment.
 
 ---
 
-## Fail-Closed Delivery Proof
+## Availability / Resilience Proof
 
-A previous UI-triggered workflow intentionally failed at the `Synchronize GitOps branch safely` step after a newer non-GitOps commit advanced the branch.
+Validated behavior includes:
 
-Important interpretation:
+- multiple Ready Status-Page replicas;
+- placement across separate Availability Zones;
+- revision-aware topology spread;
+- readiness/liveness probes;
+- Pod Disruption Budgets;
+- RDS Multi-AZ;
+- Redis Multi-AZ and automatic failover;
+- Karpenter capacity recovery;
+- HPA scaling on the dedicated demo workload.
 
-- image build succeeded;
-- Trivy gates succeeded;
-- SBOM succeeded;
-- ECR publish succeeded;
-- the workflow refused only the stale GitOps mutation.
+Status-Page web HPA is **not** claimed as active.
 
-This is evidence that the stale-run protection is not theoretical; it stopped an outdated workflow from overwriting desired state for newer source.
+During final observability validation, a node-exporter Pod could not schedule because its target node hit the Pod-density limit. The hardening response was committed to GitOps:
+
+```yaml
+prometheus-node-exporter:
+  priorityClassName: system-cluster-critical
+```
+
+After reconciliation, the observability application returned to `Synced / Healthy` and the final gate passed. This is evidence of an observed failure mode leading to an explicit resilience control.
 
 ---
 
-## Security Edge Proof
+## Public Edge / WAF Proof
 
-Validated public-path behaviors included:
+Validated edge behavior includes:
 
-| Test | Expected / observed result |
+| Test | Observed result |
 |---|---|
 | HTTP request | redirected to HTTPS |
-| HTTPS login | successful application response |
+| normal HTTPS request | application response succeeded |
 | `/healthz` | `HTTP 200` with `ok` body |
-| controlled XSS-like query | blocked by WAF with `403` |
-| WAF blocked-request threshold | CloudWatch alarm transition validated |
+| controlled XSS-style query | blocked by AWS WAF |
+| WAF blocked-request threshold | CloudWatch alarm transition observed |
 
-The WAF/CloudWatch/EventBridge/SQS path was then used as input to the security analyzer.
-
-The rate-limit proof was originally captured with a deliberately low test threshold. The production-style configuration is now tuned to 500 requests per rolling 60-second window so dashboard/Grafana traffic does not cause false positives. A genuine limit breach returns `429 Too Many Requests` with `Retry-After: 60`; managed-rule security blocks continue to return `403`.
+The AWS WAF Web ACL is associated with the ALB. Diagrams should model it as an ALB protection boundary, not as a separate network appliance hop after the load balancer.
 
 ![AWS WAF blocks a controlled XSS request](screenshots/61-aws-waf-blocks-malicious-xss-request.png)
 
 ---
 
-## Analyzer / AI Proof
+## Security Event / AI Proof
 
-The analyzer validation demonstrated:
+The validated active path is:
 
 ```text
-SQS receive
- -> event parse
+WAF BlockedRequests
+ -> CloudWatch Alarm
+ -> EventBridge
+ -> SQS
+ -> Analyzer
  -> WAF enrichment
- -> Bedrock Nova Pro analysis
+ -> Amazon Bedrock Nova Pro
  -> structured JSON validation
- -> DynamoDB conditional persistence
+ -> conditional DynamoDB persistence
  -> SQS ACK after persistence
 ```
 
-The production workload uses a dedicated Pod Identity scoped to the analyzer service account.
+The analyzer uses dedicated workload identity. Telemetry/model output are treated as untrusted inputs and AI has no infrastructure mutation authority.
 
 ![Amazon Bedrock security classification](screenshots/74-aegis-bedrock-ai-security-classification.png)
 
@@ -156,21 +175,14 @@ The production workload uses a dedicated Pod Identity scoped to the analyzer ser
 
 ## Human Review Proof
 
-A controlled XSS-related finding was reviewed and marked `CORRECT` through the human-review flow.
+The review workflow demonstrates:
 
-The review implementation demonstrates:
-
-- staff-protected analyst access;
+- staff-protected access;
 - DynamoDB finding retrieval;
-- conditional state update from `PENDING_REVIEW`;
-- analyst verdict;
-- optional correction/note fields.
-
-The production UI was subsequently hardened so the verdict buttons submit an explicit form action, preserve CSRF protection, keep `POST`-only mutation, and return a clear result instead of relying on browser submitter behavior. The fix is recorded in:
-
-```text
-11dbe4c fix(ui): make human verdict submission reliable
-```
+- conditional transition from `PENDING_REVIEW`;
+- `CORRECT` / `INCORRECT` analyst verdicts;
+- optional correction and analyst note;
+- protection against accidental double review.
 
 ![Human review feedback recorded](screenshots/77-aegis-human-review-feedback-recorded.png)
 
@@ -178,135 +190,75 @@ The production UI was subsequently hardened so the verdict buttons submit an exp
 
 ## AI Quality Proof
 
-Human-reviewed findings were used by the AI-quality tooling to calculate and publish CloudWatch metrics under:
+Human-reviewed findings feed metrics published under:
 
 ```text
 AEGIS/AIQuality
 ```
 
-The tooling distinguishes preliminary sample sizes with `EARLY_SAMPLE` instead of overstating model performance.
+Small sample sizes are labeled `EARLY_SAMPLE`; AEGIS does not claim reinforcement learning or automatic model retraining.
 
 ![CloudWatch AI quality feedback dashboard](screenshots/79-aegis-cloudwatch-ai-quality-feedback-dashboard.png)
 
 ---
 
-## Analyst Experience Proof
-
-The final AEGIS interface includes:
-
-- a responsive security command center;
-- KPI cards for ingested, pending, critical, and high-priority findings;
-- search, severity filtering, and review-state filtering;
-- severity/status badges and confidence bars;
-- incident-level AI assessment and WAF evidence;
-- a prominent Human Analyst Review panel;
-- explicit empty, loading, error, focus, and responsive states;
-- a left-side security operations navigation model.
-
-The primary UI and verdict hardening commits are:
-
-```text
-673dafb feat(ui): unify AEGIS security operations experience
-11dbe4c fix(ui): make human verdict submission reliable
-```
-
-![AEGIS public HTTPS analyst workspace](screenshots/82-aegis-public-https-human-review-platform.png)
-
----
-
 ## Observability Proof
 
-The observability validation demonstrated:
+Prometheus/Grafana validation demonstrated:
 
-- Prometheus and Grafana reconciled by the dedicated `aegis-observability` Argo CD application;
-- live Kubernetes namespace/workload/Pod/node dashboards;
-- the custom AEGIS Platform Health dashboard;
-- corrected availability and Pod-density health semantics;
-- secured same-origin embedding inside the staff-only AEGIS interface;
-- anonymous Grafana disabled, `ClusterIP`-only exposure, and viewer-only proxy identities.
+- dedicated `aegis-observability` Argo CD application;
+- Prometheus, Grafana, kube-state-metrics, and node-exporter;
+- live namespace/workload/Pod/node telemetry;
+- Git-provisioned AEGIS Platform Health dashboard;
+- corrected availability and Pod-density semantics;
+- Grafana `ClusterIP`-only with anonymous access disabled;
+- staff-controlled same-origin embedding.
 
-The implementation is represented by:
-
-```text
-902ddd8 feat(observability): add Prometheus and Grafana GitOps stack
-37a378f feat(observability): manage AEGIS Grafana dashboard with Argo CD
-55dbaf1 fix(observability): correct AEGIS dashboard health semantics
-85d53a9 feat(observability): embed secured Grafana dashboards
-```
+CloudWatch remains complementary for WAF, ALB, event-pipeline, alarms, and AI-quality metrics.
 
 ![Grafana Kubernetes observability for AEGIS](screenshots/91-aegis-grafana-kubernetes-observability.png)
 
 ---
 
-## ExternalDNS Dry-Run Proof
+## ExternalDNS / Dynu Proof
 
-ExternalDNS v0.21 and the Dynu webhook were validated with:
+The final acceptance gate validated the ExternalDNS Deployment rollout, Argo application health, least-privilege Kubernetes RBAC, and continued `--dry-run` safety mode.
 
-- namespace-scoped ingress read permissions;
-- no Kubernetes Secret read permission;
-- exact ingress label and hostname filters;
-- CNAME-only, `upsert-only` behavior;
-- an allowed `.elb.amazonaws.com` target suffix;
-- a Kubernetes Secret for the Dynu API credential;
-- `--dry-run` enabled.
+The implementation additionally enforces:
 
-This evidence proves the planned record and safety boundaries. It does **not** claim that automated DNS writes are active.
+- exact Ingress label and hostname filtering;
+- CNAME-only record handling;
+- `upsert-only` policy;
+- allowed `.elb.amazonaws.com` target suffix;
+- delete refusal;
+- Dynu API credential from a Kubernetes Secret, never Git.
 
----
+This is an **installed and runtime-validated dry-run integration**. It is not evidence that automated Dynu writes are active.
 
-## High Availability / Scaling Proof
-
-Validation covered:
-
-- two healthy Status-Page web replicas;
-- Pods scheduled across separate Availability Zones;
-- Pod Disruption Budget;
-- revision-aware topology spread;
-- readiness/liveness behavior;
-- RDS Multi-AZ;
-- Redis Multi-AZ/failover;
-- Karpenter node scaling;
-- HPA scaling on a dedicated demo workload.
-
-Status-Page web HPA is not claimed as active production configuration.
-
-![Karpenter automatic node scale-up](screenshots/55-karpenter-automatic-node-scale-up.png)
+Screenshot 93 is still useful presentation evidence and should show the exact intended hostname without exposing the API key.
 
 ---
 
 ## Repository / Source-of-Truth Proof
 
-The final repository audit verified:
+Repository validation covers:
 
-- Terraform source committed;
-- Kubernetes/GitOps source committed;
-- analyzer source committed;
-- human review / AI-quality scripts committed;
-- Status-Page UI source committed;
-- duplicate legacy production manifests retired;
-- no local-only untracked project source;
-- no tracked local Terraform plans/state/editor artifacts;
-- final branch synchronized with remote before documentation work.
+- Terraform source for both historical and final environments;
+- Kubernetes/GitOps source;
+- analyzer and human-review tooling;
+- Status-Page plugin/UI source;
+- observability and ExternalDNS source;
+- pinned CI Actions;
+- no tracked Terraform state/plan/editor artifacts;
+- credentials excluded from Git;
+- generated local scratch artifacts ignored.
 
-Repository hygiene hardening was committed as:
-
-```text
-1520fb4 chore(repo): harden source control and secret handling
-```
+`gitops/eks-dev/` is the authoritative production-style Status-Page desired state.
 
 ---
 
 ## Historical Evidence
 
-The earlier screenshots in `docs/screenshots/` remain useful evidence of the original project foundation, including:
+Earlier screenshots and the original PNG architecture diagrams remain valuable proof of project evolution: Terraform networking, NAT/private subnet validation, Ansible, PostgreSQL/Redis setup, Nginx/Gunicorn, and the original EC2 deployment.
 
-- local toolchain setup;
-- Terraform network plan/apply;
-- NAT/private subnet validation;
-- Ansible connectivity;
-- PostgreSQL and Redis configuration;
-- Status-Page host deployment;
-- Nginx/Gunicorn chain;
-- original Git/state hygiene checks.
-
-They should be presented as **project evolution evidence**, not as the final EKS runtime architecture.
+They must be presented as **Phase 1 evolution evidence**, not as the final EKS runtime architecture. See [`diagrams/README.md`](diagrams/README.md) for the diagram boundary.
