@@ -443,7 +443,7 @@ body.aegis-admin .button,body.aegis-admin input[type="submit"],body.aegis-admin 
   background: radial-gradient(circle, rgba(34, 211, 238, .08), rgba(2, 13, 24, .18) 68%);
   box-shadow: 0 0 45px rgba(34, 211, 238, .09), inset 0 0 35px rgba(34, 211, 238, .05);
 }
-.ops-radar-zone,.ops-radar-axis,.ops-radar-sweep,.ops-radar-core,.ops-radar-point { position: absolute; }
+.ops-radar-zone,.ops-radar-axis,.ops-radar-sweep,.ops-radar-point { position: absolute; }
 .ops-radar-zone { border: 1px solid; border-radius: 50%; pointer-events: none; }
 .ops-radar-zone.is-medium { inset: 5%; border-color: rgba(250, 204, 21, .19); background: rgba(250, 204, 21, .012); }
 .ops-radar-zone.is-high { inset: 19%; border-color: rgba(251, 146, 60, .22); background: rgba(251, 146, 60, .014); }
@@ -454,7 +454,7 @@ body.aegis-admin .button,body.aegis-admin input[type="submit"],body.aegis-admin 
   inset: 0;
   border-radius: 50%;
   transform-origin: 50% 50%;
-  background: conic-gradient(from 90deg, transparent 0deg 323deg, rgba(34, 211, 238, .025) 333deg, rgba(34, 211, 238, .17) 357deg, rgba(121, 238, 250, .46) 359deg, transparent 360deg);
+  background: conic-gradient(from 90deg, transparent 0deg 323deg, rgba(34, 211, 238, .02) 333deg, rgba(34, 211, 238, .13) 351deg, rgba(34, 211, 238, .05) 357deg, transparent 360deg);
   opacity: .12;
   pointer-events: none;
 }
@@ -467,26 +467,9 @@ body.aegis-admin .button,body.aegis-admin input[type="submit"],body.aegis-admin 
   height: 1px;
   transform: translateY(-50%);
   transform-origin: 0 50%;
-  background: linear-gradient(90deg, rgba(110, 231, 246, .15), #67e8f9);
-  box-shadow: 0 0 8px rgba(34, 211, 238, .72);
+  background: linear-gradient(90deg, rgba(103, 232, 249, .22), #67e8f9 18%, #67e8f9 100%);
+  box-shadow: 0 0 6px rgba(34, 211, 238, .62);
   content: "";
-}
-.ops-radar-core {
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  width: 8px;
-  height: 8px;
-  transform: translate(-50%, -50%);
-  border: 1px solid #8cf2fc;
-  border-radius: 50%;
-  background: #22d3ee;
-  box-shadow: 0 0 0 5px rgba(34, 211, 238, .08), 0 0 14px #22d3ee;
-}
-.ops-radar.is-clear .ops-radar-core {
-  border-color: #a7f3d0;
-  background: #34d399;
-  box-shadow: 0 0 0 5px rgba(52, 211, 153, .08), 0 0 14px rgba(52, 211, 153, .72);
 }
 .ops-radar-point {
   top: var(--point-y);
@@ -499,26 +482,19 @@ body.aegis-admin .button,body.aegis-admin input[type="submit"],body.aegis-admin 
   border-radius: 50%;
   color: #facc15;
   background: currentColor;
-  animation-name: ops-radar-reveal, ops-radar-pulse;
-  animation-duration: .55s, 2.2s;
-  animation-timing-function: ease-out, ease-in-out;
-  animation-delay: var(--reveal-delay, 0s), calc(var(--reveal-delay, 0s) + .55s);
-  animation-iteration-count: 1, infinite;
-  animation-fill-mode: both, none;
+  animation: ops-radar-blip 5.5s linear var(--reveal-delay, 0s) infinite both;
 }
 .ops-radar-point.is-critical { color: #f85b5b; box-shadow: 0 0 14px rgba(248, 91, 91, .9); }
 .ops-radar-point.is-high { color: #fb923c; box-shadow: 0 0 14px rgba(251, 146, 60, .85); }
 .ops-radar-point.is-medium { color: #facc15; box-shadow: 0 0 14px rgba(250, 204, 21, .78); }
-.ops-radar-point:hover { z-index: 4; transform: translate(-50%, -50%) scale(1.35); }
-.ops-radar-point:focus-visible { z-index: 5; outline: 2px solid #fff; outline-offset: 3px; transform: translate(-50%, -50%) scale(1.35); }
+.ops-radar-point:hover { z-index: 4; opacity: 1; animation: none; transform: translate(-50%, -50%) scale(1.35); }
+.ops-radar-point:focus-visible { z-index: 5; opacity: 1; animation: none; outline: 2px solid #fff; outline-offset: 3px; transform: translate(-50%, -50%) scale(1.35); }
 @keyframes ops-radar-sweep { to { transform: rotate(360deg); } }
-@keyframes ops-radar-reveal {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes ops-radar-pulse {
-  0%, 100% { opacity: .72; }
-  50% { opacity: 1; box-shadow: 0 0 0 6px transparent, 0 0 18px currentColor; }
+@keyframes ops-radar-blip {
+  0% { opacity: 0; }
+  3% { opacity: 1; }
+  8% { opacity: .92; }
+  15%, 100% { opacity: 0; }
 }
 .ops-radar-legend {
   position: absolute;

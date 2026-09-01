@@ -5,14 +5,14 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'aegis-platform.css' %}?v=2.0.2">
+  <link rel="stylesheet" href="{% static 'aegis-platform.css' %}?v=2.0.3">
 {% endblock %}
 
 {% block bodyclass %}{{ block.super }} aegis-admin{% endblock %}
 
 {% block branding %}
   <div class="aegis-admin-brand">
-    <span class="aegis-admin-shield" aria-hidden="true">A</span>
+    <span class="platform-brand-mark" aria-hidden="true">{% include 'includes/aegis_logo.html' %}</span>
     <span><strong>AEGIS</strong><small>Secure administration</small></span>
   </div>
 {% endblock %}
