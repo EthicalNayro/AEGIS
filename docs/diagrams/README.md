@@ -1,44 +1,57 @@
 # Architecture Diagram Set
 
-The diagram folder contains two generations of visual material.
+This folder contains the **authoritative final EKS architecture views**, their editable Mermaid sources, and a small set of historical Phase 1 diagrams retained only as project-evolution evidence.
 
-## Final EKS Architecture — authoritative
+## Portfolio architecture views — authoritative
 
-The following Mermaid source files describe the accepted final showcase architecture. Each diagram intentionally answers one architectural question rather than combining every subsystem into one crowded poster.
+These rendered SVG diagrams are the primary visual architecture set used by the repository README:
 
-| Diagram | Question answered |
+| Diagram | Architectural question |
 |---|---|
-| [`10-final-platform.mmd`](10-final-platform.mmd) | What are the major runtime, data, delivery, DNS, and security components? |
-| [`11-ci-cd-gitops.mmd`](11-ci-cd-gitops.mmd) | How does source become an immutable artifact and then reach EKS? |
-| [`12-security-event-pipeline.mmd`](12-security-event-pipeline.mmd) | How does a WAF security signal become a human-reviewed AI finding? |
-| [`13-kubernetes-ha.mmd`](13-kubernetes-ha.mmd) | How are workloads distributed and kept resilient across nodes/AZs? |
-| [`14-identity-trust.mmd`](14-identity-trust.mmd) | Which identities can call AWS/Kubernetes resources, and where are trust boundaries? |
-| [`15-observability.mmd`](15-observability.mmd) | Which signals belong to Prometheus/Grafana vs CloudWatch? |
+| [`20-aegis-final-platform.svg`](20-aegis-final-platform.svg) | How do the public edge, private EKS runtime, managed data services, security/AI services, GitOps delivery, and DNS boundary fit together? |
+| [`21-aegis-security-human-decision.svg`](21-aegis-security-human-decision.svg) | How does a WAF security signal become a validated, human-reviewed AI finding? |
+| [`22-aegis-secure-cicd-gitops.svg`](22-aegis-secure-cicd-gitops.svg) | How does source become an immutable artifact and reach EKS without granting CI direct cluster deployment authority? |
+| [`23-aegis-resilience-observability.svg`](23-aegis-resilience-observability.svg) | How are workloads distributed and recovered across AZs, and how is the platform observed? |
 
-These `.mmd` files can be rendered with any Mermaid-compatible renderer. The source itself remains reviewable in Git.
+The SVGs intentionally use generic service cards rather than relying on vendor-icon artwork. This keeps the diagrams readable in GitHub, portable, diffable, and directly tied to the implemented architecture.
 
-## Historical Phase 1 PNGs — non-authoritative for final runtime
+## Editable final sources
 
-The following images are retained as **project-evolution evidence**:
+The focused Mermaid sources remain the reviewable engineering source of truth for detailed topology questions:
+
+| Source | Focus |
+|---|---|
+| [`10-final-platform.mmd`](10-final-platform.mmd) | final runtime, data, delivery, DNS, and security components |
+| [`11-ci-cd-gitops.mmd`](11-ci-cd-gitops.mmd) | immutable CI/CD and Argo CD GitOps flow |
+| [`12-security-event-pipeline.mmd`](12-security-event-pipeline.mmd) | WAF event processing, Bedrock analysis, persistence, and human review |
+| [`13-kubernetes-ha.mmd`](13-kubernetes-ha.mmd) | multi-AZ placement, PDBs, workers, scheduler, Karpenter, and managed data services |
+| [`14-identity-trust.mmd`](14-identity-trust.mmd) | GitHub OIDC, EKS Pod Identity, namespace RBAC, and trust boundaries |
+| [`15-observability.mmd`](15-observability.mmd) | Prometheus/Grafana, CloudWatch, and Argo CD health signals |
+
+## Historical Phase 1 PNGs — non-authoritative
+
+The following images document the earlier EC2/Ansible phase and are kept only to show the project's evolution:
 
 - `01-aws-network-architecture.png`
 - `02-security-architecture.png`
 - `03-production-vs-testing-flow.png`
 - `04-deployment-automation-flow.png`
 
-They describe the earlier EC2/Ansible phase and must not be presented as the final `eks-dev` architecture.
+They **must not** be presented as the current `eks-dev` architecture.
 
-The final environment uses:
+## Accepted final environment
 
 ```text
 VPC 10.10.0.0/16
-private EKS workers
+private EKS workers across 2 AZs
 RDS PostgreSQL Multi-AZ
-ElastiCache Redis Multi-AZ
-ALB + ACM + WAF
-Argo CD GitOps
-Prometheus / Grafana
-ExternalDNS + Dynu webhook (dry-run)
+ElastiCache Redis Multi-AZ / TLS
+ALB + ACM + AWS WAF
+AEGIS Analyzer + Amazon Bedrock + DynamoDB findings
+human-in-the-loop review
+GitHub OIDC + immutable ECR + Argo CD GitOps
+Prometheus / Grafana + CloudWatch
+ExternalDNS + Dynu webhook in deliberate --dry-run safety mode
 ```
 
-For narrative architecture documentation, see [`../architecture.md`](../architecture.md).
+For narrative architecture documentation and engineering boundaries, see [`../architecture.md`](../architecture.md).

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+  <title id="title">AEGIS secure CI CD and GitOps architecture</title>
+  <desc id="desc">Developer commit through GitHub Actions validation, Trivy, SBOM, OIDC, immutable ECR digest, guarded GitOps update, Argo CD reconciliation, PreSync migration, EKS rollout and runtime digest verification.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#07111e"/><stop offset="1" stop-color="#0e1324"/></linearGradient>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#67e8f9"/></marker>
+    <marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#4ade80"/></marker>
+    <style>
+      .title{font:700 34px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.sub{font:400 17px Inter,Segoe UI,Arial,sans-serif;fill:#94a3b8}.label{font:700 15.5px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.small{font:400 12.5px Inter,Segoe UI,Arial,sans-serif;fill:#94a3b8}.stage{font:700 12px Inter,Segoe UI,Arial,sans-serif;letter-spacing:1.5px;fill:#cbd5e1}.box{fill:#111c2e;stroke:#334155;stroke-width:1.5}.ci{fill:#111c2e;stroke:#38bdf8;stroke-width:1.5}.gate{fill:#21131c;stroke:#fb7185;stroke-width:1.5}.artifact{fill:#24180b;stroke:#f59e0b;stroke-width:1.5}.git{fill:#16162b;stroke:#818cf8;stroke-width:1.5}.deploy{fill:#10251c;stroke:#4ade80;stroke-width:1.5}.line{stroke:#67e8f9;stroke-width:2.3;fill:none;marker-end:url(#a)}.green{stroke:#4ade80;stroke-width:2.3;fill:none;marker-end:url(#g)}
+    </style>
+  </defs>
+  <rect width="1600" height="800" fill="url(#bg)"/>
+  <circle cx="1500" cy="80" r="180" fill="#38bdf8" opacity=".05"/><circle cx="90" cy="730" r="160" fill="#818cf8" opacity=".045"/>
+  <text x="70" y="68" class="title">Secure CI/CD &amp; GitOps — Immutable by Design</text>
+  <text x="70" y="98" class="sub">CI builds and publishes; Git declares desired state; Argo CD owns cluster mutation and reconciliation.</text>
+
+  <text x="70" y="158" class="stage">SOURCE</text>
+  <rect x="70" y="185" width="180" height="92" rx="16" class="box"/><text x="160" y="217" text-anchor="middle" class="label">Developer Commit</text><text x="160" y="241" text-anchor="middle" class="small">Git history is the trigger</text><text x="160" y="259" text-anchor="middle" class="small">and audit trail</text>
+  <rect x="290" y="185" width="185" height="92" rx="16" class="git"/><text x="382" y="217" text-anchor="middle" class="label">GitHub Repository</text><text x="382" y="241" text-anchor="middle" class="small">source + workflows</text><text x="382" y="259" text-anchor="middle" class="small">+ GitOps desired state</text>
+  <path d="M250 231 H290" class="line"/>
+
+  <text x="530" y="158" class="stage">SECURE CI</text>
+  <rect x="530" y="185" width="180" height="92" rx="16" class="ci"/><text x="620" y="217" text-anchor="middle" class="label">Validate &amp; Build</text><text x="620" y="241" text-anchor="middle" class="small">source + renderer</text><text x="620" y="259" text-anchor="middle" class="small">container build</text>
+  <rect x="750" y="185" width="180" height="92" rx="16" class="gate"/><text x="840" y="214" text-anchor="middle" class="label">Trivy Gate</text><text x="840" y="238" text-anchor="middle" class="small">report HIGH / CRITICAL</text><text x="840" y="256" text-anchor="middle" class="small">fail closed on fixable CRITICAL</text>
+  <rect x="970" y="185" width="170" height="92" rx="16" class="ci"/><text x="1055" y="217" text-anchor="middle" class="label">CycloneDX SBOM</text><text x="1055" y="241" text-anchor="middle" class="small">software inventory</text><text x="1055" y="259" text-anchor="middle" class="small">generated in pipeline</text>
+  <path d="M475 231 H530" class="line"/><path d="M710 231 H750" class="line"/><path d="M930 231 H970" class="line"/>
+
+  <text x="1195" y="158" class="stage">AWS TRUST</text>
+  <rect x="1195" y="185" width="150" height="92" rx="16" class="artifact"/><text x="1270" y="214" text-anchor="middle" class="label">GitHub OIDC</text><text x="1270" y="238" text-anchor="middle" class="small">short-lived token</text><text x="1270" y="256" text-anchor="middle" class="small">→ AWS STS</text>
+  <rect x="1380" y="185" width="150" height="92" rx="16" class="artifact"/><text x="1455" y="214" text-anchor="middle" class="label">ECR</text><text x="1455" y="238" text-anchor="middle" class="small">immutable image</text><text x="1455" y="256" text-anchor="middle" class="small">sha256 digest</text>
+  <path d="M1140 231 H1195" class="line"/><path d="M1345 231 H1380" class="line"/>
+
+  <text x="70" y="385" class="stage">DECLARED STATE</text>
+  <rect x="70" y="412" width="235" height="100" rx="16" class="gate"/><text x="187" y="443" text-anchor="middle" class="label">Guarded GitOps Update</text><text x="187" y="468" text-anchor="middle" class="small">resolve ECR digest</text><text x="187" y="487" text-anchor="middle" class="small">reject stale non-GitOps source</text>
+  <rect x="355" y="412" width="240" height="100" rx="16" class="git"/><text x="475" y="443" text-anchor="middle" class="label">gitops/eks-dev</text><text x="475" y="468" text-anchor="middle" class="small">kustomization.yaml</text><text x="475" y="487" text-anchor="middle" class="small">digest-pinned desired state</text>
+  <path d="M1455 277 V340 H187 V412" class="line"/><path d="M305 462 H355" class="green"/>
+
+  <text x="650" y="385" class="stage">GITOPS CONTROL PLANE</text>
+  <rect x="650" y="412" width="180" height="100" rx="16" class="git"/><text x="740" y="443" text-anchor="middle" class="label">Argo CD</text><text x="740" y="468" text-anchor="middle" class="small">pull-based reconciliation</text><text x="740" y="487" text-anchor="middle" class="small">self-healing desired state</text>
+  <rect x="880" y="412" width="190" height="100" rx="16" class="deploy"/><text x="975" y="443" text-anchor="middle" class="label">PreSync Migration</text><text x="975" y="468" text-anchor="middle" class="small">database schema Job</text><text x="975" y="487" text-anchor="middle" class="small">before application rollout</text>
+  <rect x="1120" y="412" width="190" height="100" rx="16" class="deploy"/><text x="1215" y="443" text-anchor="middle" class="label">Amazon EKS Rollout</text><text x="1215" y="468" text-anchor="middle" class="small">private workers</text><text x="1215" y="487" text-anchor="middle" class="small">digest-pinned image</text>
+  <rect x="1360" y="412" width="170" height="100" rx="16" class="deploy"/><text x="1445" y="443" text-anchor="middle" class="label">Verification</text><text x="1445" y="468" text-anchor="middle" class="small">Git digest ==</text><text x="1445" y="487" text-anchor="middle" class="small">runtime digest</text>
+  <path d="M595 462 H650" class="green"/><path d="M830 462 H880" class="green"/><path d="M1070 462 H1120" class="green"/><path d="M1310 462 H1360" class="green"/>
+
+  <rect x="70" y="575" width="710" height="118" rx="20" fill="#0c1726" stroke="#334155"/>
+  <text x="100" y="607" class="stage">SEPARATION OF DUTIES</text>
+  <text x="100" y="640" class="label">GitHub CI role</text><text x="225" y="640" class="small">can publish to ECR and update declared state.</text>
+  <text x="100" y="668" class="label">Direct EKS deployment</text><text x="270" y="668" class="small" fill="#fb7185">not permitted.</text>
+
+  <rect x="835" y="575" width="695" height="118" rx="20" fill="#0c1726" stroke="#334155"/>
+  <text x="865" y="607" class="stage">INFRASTRUCTURE CI</text>
+  <text x="865" y="640" class="label">Terraform CI</text><text x="980" y="640" class="small">fmt · init -backend=false · validate</text>
+  <text x="865" y="668" class="small">Runs independently for infrastructure correctness without granting application deployment authority.</text>
+
+  <text x="70" y="746" class="sub">Delivery invariant: source commit → validated artifact → immutable digest → declared Git state → Argo reconciliation → verified runtime.</text>
+</svg>
