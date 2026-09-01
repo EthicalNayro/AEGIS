@@ -6,7 +6,13 @@ cd "$ROOT"
 
 PASS_COUNT=0
 TMP_RENDER="$(mktemp)"
-trap 'rm -f "$TMP_RENDER"' EXIT
+TMP_DRYRUN_ERR="$(mktemp)"
+HEALTH_BODY=""
+cleanup() {
+  rm -f "$TMP_RENDER" "$TMP_DRYRUN_ERR"
+  [[ -z "$HEALTH_BODY" ]] || rm -f "$HEALTH_BODY"
+}
+trap cleanup EXIT
 
 pass() {
   printf 'PASS  %s\n' "$1"
@@ -22,7 +28,7 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
 }
 
-for cmd in git kubectl curl terraform awk grep sort wc; do
+for cmd in git kubectl curl terraform awk grep sort wc sed tr; do
   require_cmd "$cmd"
 done
 
@@ -41,7 +47,10 @@ pass "Terraform eks-dev formatting and validation"
 
 kubectl kustomize gitops/eks-dev >"$TMP_RENDER"
 [[ -s "$TMP_RENDER" ]] || fail "GitOps render is empty"
-kubectl apply --dry-run=client --validate=false -f "$TMP_RENDER" >/dev/null
+if ! kubectl apply --dry-run=client --validate=false -f "$TMP_RENDER" >/dev/null 2>"$TMP_DRYRUN_ERR"; then
+  cat "$TMP_DRYRUN_ERR" >&2
+  fail "GitOps render failed Kubernetes client dry-run"
+fi
 pass "GitOps render and Kubernetes client dry-run"
 
 argo_state() {
@@ -87,14 +96,22 @@ pass "ExternalDNS remains in dry-run safety mode"
 pass "ExternalDNS namespace RBAC is least privilege"
 
 DESIRED_DIGEST="$(awk '/^[[:space:]]*digest:[[:space:]]*sha256:/{print $2; exit}' gitops/eks-dev/kustomization.yaml)"
-RUNTIME_IMAGE="$(kubectl -n aegis-system get deployment aegis-status-page \
-  -o jsonpath='{.spec.template.spec.containers[?(@.name=="status-page")].image}')"
-RUNTIME_DIGEST="${RUNTIME_IMAGE##*@}"
-
 [[ -n "$DESIRED_DIGEST" ]] || fail "could not read desired Status-Page digest"
-[[ "$DESIRED_DIGEST" == "$RUNTIME_DIGEST" ]] \
-  || fail "GitOps digest does not match the EKS runtime digest"
-pass "GitOps digest matches EKS runtime digest"
+
+GUNICORN_IMAGE="$(kubectl -n aegis-system get deployment aegis-status-page \
+  -o jsonpath='{.spec.template.spec.containers[?(@.name=="gunicorn")].image}')"
+RENDER_IMAGE="$(kubectl -n aegis-system get deployment aegis-status-page \
+  -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="render-configuration")].image}')"
+STATIC_IMAGE="$(kubectl -n aegis-system get deployment aegis-status-page \
+  -o jsonpath='{.spec.template.spec.initContainers[?(@.name=="collect-static")].image}')"
+
+for runtime_image in "$GUNICORN_IMAGE" "$RENDER_IMAGE" "$STATIC_IMAGE"; do
+  [[ -n "$runtime_image" ]] || fail "could not read a Status-Page runtime application image"
+  runtime_digest="${runtime_image##*@}"
+  [[ "$runtime_digest" == "$DESIRED_DIGEST" ]] \
+    || fail "GitOps digest does not match all EKS Status-Page application images"
+done
+pass "GitOps digest matches all EKS Status-Page application images"
 
 READY_REPLICAS="$(kubectl -n aegis-system get deployment aegis-status-page \
   -o jsonpath='{.status.readyReplicas}')"
@@ -102,7 +119,7 @@ READY_REPLICAS="$(kubectl -n aegis-system get deployment aegis-status-page \
 
 mapfile -t WEB_NODES < <(
   kubectl -n aegis-system get pods \
-    -l app.kubernetes.io/name=aegis-status-page \
+    -l app=aegis-status-page \
     --field-selector=status.phase=Running \
     -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' \
     | sed '/^$/d' \
@@ -122,7 +139,6 @@ AZ_COUNT="$(wc -l <<<"$AZS" | tr -d ' ')"
 pass "Status-Page has multiple Ready replicas across Availability Zones"
 
 HEALTH_BODY="$(mktemp)"
-trap 'rm -f "$TMP_RENDER" "$HEALTH_BODY"' EXIT
 HTTP_CODE="$(curl -sS -o "$HEALTH_BODY" -w '%{http_code}' \
   https://app.aegis-project.ddnsfree.com/healthz)"
 [[ "$HTTP_CODE" == "200" ]] || fail "public health endpoint returned HTTP $HTTP_CODE"
