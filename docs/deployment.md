@@ -2,30 +2,31 @@
 
 ## Overview
 
-The final AEGIS deployment model separates **CI** from **CD**.
+The final AEGIS delivery model separates **infrastructure validation**, **application CI**, and **Kubernetes CD**.
 
 ```text
 Developer
    |
 GitHub
    |
-GitHub Actions CI
+   +--> Terraform CI
+   |      -> fmt / init -backend=false / validate
+   |      -> dev + eks-dev
    |
-   +--> validation
-   +--> container build
-   +--> Trivy
-   +--> SBOM
-   +--> ECR
-   +--> GitOps digest update
-            |
-            v
-          Argo CD
-            |
-            v
-            EKS
+   +--> Status-Page Secure CI
+          -> validate / build / Trivy / SBOM
+          -> GitHub OIDC
+          -> immutable ECR image
+          -> guarded GitOps digest update
+                    |
+                    v
+                  Argo CD
+                    |
+                    v
+                    EKS
 ```
 
-GitHub Actions does not run `kubectl` and does not receive EKS permissions. Argo CD continuously reconciles Kubernetes state from Git.
+GitHub Actions does not deploy the Status-Page directly with `kubectl` and the Status-Page CI role has no EKS deployment permission. Argo CD continuously reconciles Kubernetes state from Git.
 
 ---
 
@@ -42,23 +43,26 @@ GitOps path: gitops/eks-dev
 Deployment branch: phase-1-1/platform-modernization
 ```
 
-The original `terraform/environments/dev` and Ansible-based EC2 deployment remain in the repository as historical project phases, not as the final Status-Page runtime.
+The original `terraform/environments/dev` and Ansible-based EC2 deployment remain as historical project phases, not as the final Status-Page runtime.
 
 ---
 
-## Infrastructure Provisioning
+## Infrastructure Provisioning Boundary
 
-Terraform owns the AWS infrastructure for `eks-dev`, including the VPC, EKS foundation, managed data services, ECR, WAF/observability resources, event queues, DynamoDB findings storage, and workload IAM roles.
+Terraform owns the AWS infrastructure for `eks-dev`, including the VPC/EKS foundation, managed data services, ECR, WAF/observability resources, event queues, DynamoDB findings storage, and workload IAM roles.
 
-From the environment directory:
+The repository CI validates both Terraform environments:
 
-```bash
-cd terraform/environments/eks-dev
-terraform fmt -check -recursive
-terraform validate
+```text
+terraform/environments/dev
+terraform/environments/eks-dev
 ```
 
-Infrastructure changes are intentionally separate from the Status-Page application delivery workflow.
+The workflow runs formatting, `init -backend=false`, and validation using pinned third-party GitHub Actions.
+
+The repository does **not** claim an implemented approval-gated Terraform apply workflow, remote-state disaster-recovery design, or automatic infrastructure deployment from the application CI path.
+
+Infrastructure apply remains an explicit operational activity separate from Status-Page delivery.
 
 ---
 
@@ -68,13 +72,15 @@ The Status-Page image uses a multi-stage Docker build.
 
 The builder stage contains compilation/build tooling and produces the Python virtual environment. The runtime stage starts again from the pinned Python base-image digest and installs only runtime OS dependencies before copying the virtual environment and application.
 
-This keeps compiler and development packages out of the final runtime image.
+This keeps compiler/development packages out of the final runtime image.
 
 The application source is based on a pinned upstream Status-Page revision and includes the native AEGIS review plugin plus limited intentional UI/template overrides.
 
 ---
 
 ## GitHub Actions CI
+
+All active third-party GitHub Actions are pinned by exact commit SHA.
 
 The secure Status-Page workflow performs two major jobs.
 
@@ -85,7 +91,7 @@ The secure Status-Page workflow performs two major jobs.
 - validates AEGIS plugin Python;
 - validates the runtime configuration renderer;
 - builds the container;
-- runs a Trivy vulnerability report;
+- runs a Trivy vulnerability/secret report;
 - enforces a fail-closed CRITICAL vulnerability gate.
 
 ### Publish Immutable Image
@@ -104,8 +110,6 @@ The secure Status-Page workflow performs two major jobs.
 - updates the GitOps image digest;
 - commits the desired-state change back to Git.
 
-Third-party Actions are pinned by commit SHA.
-
 ---
 
 ## GitHub OIDC
@@ -123,15 +127,13 @@ AWS STS
 AEGIS GitHub CI IAM role
 ```
 
-The trust policy is scoped to the exact repository and deployment branch. The role can deliver to ECR but cannot deploy directly to EKS and cannot pass arbitrary IAM roles.
+The trust policy is scoped to the exact repository/deployment branch. The role can deliver to ECR but cannot deploy directly to EKS and cannot pass arbitrary IAM roles.
 
 ---
 
 ## Immutable Delivery
 
 The deployment uses ECR image digests rather than mutable runtime tags.
-
-Conceptually:
 
 ```text
 git-<commit>
@@ -146,9 +148,13 @@ sha256:<digest>
 gitops/eks-dev/kustomization.yaml
 ```
 
-Argo CD therefore deploys the exact artifact that passed the CI security gates.
+Argo CD therefore deploys the exact artifact declared in Git.
 
-The final runtime verification explicitly compared the GitOps digest with the image digest in the EKS Deployment.
+The final acceptance gate compares the GitOps digest with all application-image uses in the live Status-Page Deployment:
+
+- Gunicorn;
+- `render-configuration` init container;
+- `collect-static` init container.
 
 ---
 
@@ -156,12 +162,12 @@ The final runtime verification explicitly compared the GitOps digest with the im
 
 A workflow can become stale while it is building. AEGIS protects against that race before mutating desired state.
 
-Before updating `gitops/eks-dev/kustomization.yaml`, CI fetches the current remote branch and inspects commits newer than the workflow's source revision.
+Before updating `gitops/eks-dev/kustomization.yaml`, CI fetches the current remote branch and inspects commits newer than the workflow source revision.
 
-- If the only newer change is the previous GitOps digest update, the rerun can safely continue.
+- If the only newer change is the previous GitOps digest update, a safe rerun can continue.
 - If newer non-GitOps source exists, the workflow fails closed.
 
-This protection was exercised by a real workflow run: a stale UI delivery was rejected after a newer security-tooling commit advanced the branch. A manually triggered run at the new HEAD then completed successfully.
+This protection was exercised by a real workflow run: a stale delivery was rejected after newer source advanced the branch.
 
 ---
 
@@ -181,7 +187,14 @@ The Application enables:
 
 The AppProject restricts source, destination, and allowed resource kinds.
 
-`gitops/eks-dev/` is the authoritative production desired state for the Status-Page application. Duplicate legacy production manifests were removed from competing source-of-truth locations.
+`gitops/eks-dev/` is the authoritative production-style desired state. Duplicate legacy production manifests were removed from competing source-of-truth locations.
+
+The final acceptance gate requires both:
+
+```text
+aegis-status-page   Synced / Healthy
+aegis-observability Synced / Healthy
+```
 
 ---
 
@@ -203,9 +216,9 @@ Hook succeeds
 Application rollout
 ```
 
-The Job uses the same immutable application image, service account, runtime configuration renderer, security context, and secret boundaries as the application workload.
+The Job uses the same immutable application image and workload security boundaries as the application.
 
-This prevents every web replica from racing to perform schema migration during startup.
+This avoids every web replica racing to perform schema migration during startup.
 
 ---
 
@@ -222,9 +235,10 @@ The GitOps composition includes:
 - Ingress for the public ALB;
 - unprivileged Nginx configuration;
 - runtime configuration renderer;
-- migration Job.
+- migration Job;
+- ExternalDNS controller + Dynu webhook in dry-run safety mode.
 
-The runtime ConfigMap and the sensitive Kubernetes Secret are intentionally not stored in the public repository.
+Sensitive runtime Secrets are intentionally not stored in the public repository.
 
 ---
 
@@ -235,15 +249,17 @@ The production request path is:
 ```text
 HTTP :80 -> redirect to HTTPS
 HTTPS :443
-  -> ACM
-  -> ALB
-  -> WAF
-  -> Ingress
+  -> Internet-facing ALB
+       |-- ACM certificate attached
+       `-- AWS WAF Web ACL associated
+  -> Kubernetes Ingress
   -> Service :8080
   -> Nginx
   -> Gunicorn
   -> Django
 ```
+
+ACM and WAF are relationships on the ALB; they should not be modeled as serial hops after it.
 
 Health endpoint:
 
@@ -251,7 +267,7 @@ Health endpoint:
 https://app.aegis-project.ddnsfree.com/healthz
 ```
 
-Expected response:
+Accepted response:
 
 ```text
 HTTP 200
@@ -260,9 +276,53 @@ ok
 
 ---
 
+## DNS Automation
+
+The public hostname is managed by Dynu:
+
+```text
+app.aegis-project.ddnsfree.com
+```
+
+ExternalDNS v0.21 is deployed with an AEGIS Dynu webhook provider. The accepted state intentionally keeps:
+
+```text
+--dry-run
+```
+
+The final gate verifies the ExternalDNS rollout and least-privilege RBAC while ensuring dry-run remains enabled. Active automated Dynu mutation is not claimed.
+
+---
+
+## Observability Rollout Note
+
+During final observability validation, one node-exporter Pod could not schedule because its target node reached the Pod-density limit. The GitOps values were hardened with `system-cluster-critical` priority for node-exporter. After reconciliation, the observability Argo application returned to `Synced / Healthy`.
+
+This incident is recorded because it demonstrates the deployment model behaving correctly under scheduling pressure rather than hiding a partially rolled-out DaemonSet.
+
+---
+
+## Final Acceptance
+
+From repository root:
+
+```bash
+bash scripts/final-acceptance.sh
+```
+
+Accepted result:
+
+```text
+AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)
+```
+
+See [`final-acceptance.md`](final-acceptance.md) for the complete proof.
+
+---
+
 ## Rollback Model
 
-Because the deployed artifact is identified by digest in Git, rollback is an auditable Git operation: restore the previously validated digest in desired state and allow Argo CD to reconcile.
+Because the deployed artifact is identified by digest in Git, application rollback is an auditable Git operation: restore a previously validated digest in desired state and allow Argo CD to reconcile.
 
 Application deployment is therefore reproducible independently of a developer workstation.
 
@@ -270,6 +330,6 @@ Application deployment is therefore reproducible independently of a developer wo
 
 ## Original Ansible Deployment
 
-Ansible remains part of the project and demonstrates host configuration for the earlier EC2 foundation. It is still syntax-validated and its secret-bearing database tasks use `no_log: true`.
+Ansible remains part of the repository and demonstrates host configuration for the earlier EC2 foundation. It is still syntax-validated and secret-bearing database tasks use `no_log: true`.
 
-It is no longer the final application delivery mechanism for the `eks-dev` showcase environment.
+It is no longer the final application delivery mechanism for `eks-dev`.
