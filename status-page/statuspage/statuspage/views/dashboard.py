@@ -1,10 +1,12 @@
 import hashlib
 import logging
 import math
+from datetime import timedelta
 
 from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
@@ -29,6 +31,51 @@ RADAR_SEVERITY_BANDS = {
     'MEDIUM': (36, 44),
 }
 RADAR_SCAN_SECONDS = 5.5
+
+
+def build_sparkline(values, width=160, height=48, padding=4):
+    """Return SVG polyline points for a compact, data-backed chart."""
+
+    values = list(values) or [0, 0]
+    if len(values) == 1:
+        values = values * 2
+
+    minimum = min(values)
+    maximum = max(values)
+    horizontal_range = width - padding * 2
+    vertical_range = height - padding * 2
+    points = []
+
+    for index, value in enumerate(values):
+        x = padding + index / (len(values) - 1) * horizontal_range
+        y = (
+            height / 2
+            if maximum == minimum
+            else padding + (maximum - value) / (maximum - minimum) * vertical_range
+        )
+        points.append(f'{x:.1f},{y:.1f}')
+
+    return ' '.join(points)
+
+
+def build_daily_activity(queryset, date_field, days=7):
+    """Aggregate a queryset into a complete rolling daily series."""
+
+    today = timezone.localdate()
+    first_day = today - timedelta(days=days - 1)
+    rows = (
+        queryset
+        .filter(**{f'{date_field}__date__gte': first_day})
+        .annotate(day=TruncDate(date_field))
+        .values('day')
+        .annotate(total=Count('pk'))
+        .order_by('day')
+    )
+    totals = {row['day']: row['total'] for row in rows}
+    return [
+        totals.get(first_day + timedelta(days=offset), 0)
+        for offset in range(days)
+    ]
 
 
 def build_radar_points(findings, limit=12):
@@ -95,6 +142,8 @@ def get_aegis_dashboard_context(request):
         'aegis_review_completion': 0,
         'aegis_recent_findings': [],
         'aegis_radar_points': [],
+        'aegis_confidence_points': build_sparkline([]),
+        'aegis_average_confidence': 0,
         'aegis_platform_dashboard': None,
     }
 
@@ -153,6 +202,19 @@ def get_aegis_dashboard_context(request):
     )
     context['aegis_recent_findings'] = findings[:5]
     context['aegis_radar_points'] = build_radar_points(findings)
+    confidence_values = [
+        finding['confidence_percent']
+        for finding in findings[:8]
+        if finding.get('confidence_percent') is not None
+    ]
+    context['aegis_confidence_points'] = build_sparkline(
+        reversed(confidence_values)
+    )
+    context['aegis_average_confidence'] = (
+        round(sum(confidence_values) / len(confidence_values))
+        if confidence_values
+        else 0
+    )
 
     return context
 
@@ -174,12 +236,69 @@ class DashboardHomeView(BaseView):
             ~Q(status=MaintenanceStatusChoices.COMPLETED),
             scheduled_at__gte=timezone.now(),
         )
+        incident_activity = build_daily_activity(
+            Incident.objects.all(),
+            'created',
+        )
 
         context = {
             'open_incidents': open_incidents.count(),
             'open_maintenances': open_maintenances.count(),
             'upcoming_maintenances': upcoming_maintenances.count(),
+            'incident_activity_count': sum(incident_activity),
+            'incident_activity_points': build_sparkline(incident_activity),
+            'component_total_count': 0,
+            'component_impacted_count': 0,
+            'component_health_percent': 100,
+            'component_health_points': build_sparkline([]),
+            'audit_activity_count': 0,
+            'audit_activity_points': build_sparkline([]),
         }
+
+        if request.user.has_perm('components.view_component'):
+            from components.choices import ComponentStatusChoices
+            from components.models import Component
+
+            component_statuses = list(
+                Component.objects.values_list('status', flat=True)
+            )
+            status_scores = {
+                ComponentStatusChoices.OPERATIONAL: 100,
+                ComponentStatusChoices.MAINTENANCE: 72,
+                ComponentStatusChoices.DEGRADED_PERFORMANCE: 58,
+                ComponentStatusChoices.PARTIAL_OUTAGE: 32,
+                ComponentStatusChoices.MAJOR_OUTAGE: 12,
+                ComponentStatusChoices.UNKNOWN: 0,
+            }
+            operational_count = component_statuses.count(
+                ComponentStatusChoices.OPERATIONAL
+            )
+            context['component_total_count'] = len(component_statuses)
+            context['component_impacted_count'] = (
+                len(component_statuses) - operational_count
+            )
+            context['component_health_percent'] = (
+                round(operational_count / len(component_statuses) * 100)
+                if component_statuses
+                else 100
+            )
+            context['component_health_points'] = build_sparkline([
+                status_scores.get(status, 0)
+                for status in component_statuses
+            ])
+
+        if request.user.has_perm('extras.view_objectchange'):
+            from extras.models import ObjectChange
+
+            audit_activity = build_daily_activity(
+                ObjectChange.objects.restrict(request.user, 'view'),
+                'time',
+            )
+            context['audit_activity_count'] = sum(audit_activity)
+            context['audit_activity_points'] = build_sparkline(
+                audit_activity
+            )
+
         context.update(get_aegis_dashboard_context(request))
 
         return render(request, self.template_name, context)

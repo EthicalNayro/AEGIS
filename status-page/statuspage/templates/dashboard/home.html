@@ -178,11 +178,41 @@
       {% endif %}
     </section>
 
-    <section class="ops-quick-grid" aria-label="Security operations shortcuts">
-      {% if aegis_enabled and not aegis_restricted %}<a class="ops-quick-action" href="{% url 'plugins:aegis_review:findings' %}"><span><i class="mdi mdi-shield-search-outline" aria-hidden="true"></i></span><div><strong>Investigate findings</strong><small>Review AI decisions and WAF evidence</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
-      {% if perms.incidents.view_incident %}<a class="ops-quick-action" href="{% url 'incidents:incident_list' %}"><span><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span><div><strong>Incident response</strong><small>Coordinate impact and recovery</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
-      {% if perms.components.view_component %}<a class="ops-quick-action" href="{% url 'components:component_list' %}"><span><i class="mdi mdi-server-network" aria-hidden="true"></i></span><div><strong>Service topology</strong><small>Inspect operational dependencies</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
-      {% if perms.extras.view_objectchange %}<a class="ops-quick-action" href="{% url 'extras:objectchange_list' %}"><span><i class="mdi mdi-history" aria-hidden="true"></i></span><div><strong>Audit timeline</strong><small>Trace administrative changes</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+    <section class="ops-telemetry-section" aria-labelledby="ops-telemetry-title">
+      <header class="ops-telemetry-heading">
+        <div><span class="ops-section-kicker">CONTROL-PLANE SIGNALS</span><h2 id="ops-telemetry-title">Operational telemetry</h2><p>Live application and platform signals sourced from AEGIS and Status-Page.</p></div>
+        <span class="ops-telemetry-live"><i aria-hidden="true"></i>Live data</span>
+      </header>
+      <div class="ops-quick-grid">
+        {% if aegis_enabled and not aegis_restricted %}
+          <a class="ops-telemetry-card is-cyan" href="{% url 'plugins:aegis_review:findings' %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-shield-search-outline" aria-hidden="true"></i></span><div><strong>Investigate findings</strong><small>Latest AI confidence signal</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ aegis_pending_count }}</strong><span>pending reviews</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Latest AI confidence trend"><polyline points="{{ aegis_confidence_points }}"/></svg></div>
+            <footer><span>Average confidence</span><strong>{{ aegis_average_confidence }}%</strong></footer>
+          </a>
+        {% endif %}
+        {% if perms.incidents.view_incident %}
+          <a class="ops-telemetry-card is-blue" href="{% url 'incidents:incident_list' %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span><div><strong>Incident response</strong><small>Seven-day incident activity</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ open_incidents }}</strong><span>open incidents</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Seven-day incident activity"><polyline points="{{ incident_activity_points }}"/></svg></div>
+            <footer><span>Created in seven days</span><strong>{{ incident_activity_count }}</strong></footer>
+          </a>
+        {% endif %}
+        {% if perms.components.view_component %}
+          <a class="ops-telemetry-card is-green" href="{% url 'components:component_list' %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-server-network" aria-hidden="true"></i></span><div><strong>Service topology</strong><small>Component health profile</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ component_health_percent }}%</strong><span>operational</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Service component health profile"><polyline points="{{ component_health_points }}"/></svg></div>
+            <footer><span>{{ component_total_count }} monitored components</span><strong>{{ component_impacted_count }} impacted</strong></footer>
+          </a>
+        {% endif %}
+        {% if perms.extras.view_objectchange %}
+          <a class="ops-telemetry-card is-amber" href="{% url 'extras:objectchange_list' %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-history" aria-hidden="true"></i></span><div><strong>Audit timeline</strong><small>Seven-day administrative activity</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ audit_activity_count }}</strong><span>recorded changes</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Seven-day administrative change activity"><polyline points="{{ audit_activity_points }}"/></svg></div>
+            <footer><span>Protected audit evidence</span><strong>7 days</strong></footer>
+          </a>
+        {% endif %}
+      </div>
     </section>
   </div>
 {% endblock %}

@@ -6,12 +6,23 @@ from django.test import SimpleTestCase, override_settings
 
 from statuspage.views.dashboard import (
     build_radar_points,
+    build_sparkline,
     get_aegis_dashboard_context,
 )
 
 
 @override_settings(PLUGINS=["aegis_review"])
 class AegisDashboardContextTests(SimpleTestCase):
+    def test_sparkline_uses_the_full_viewbox_and_handles_flat_data(self):
+        self.assertEqual(
+            build_sparkline([0, 10, 5]),
+            "4.0,44.0 80.0,4.0 156.0,24.0",
+        )
+        self.assertEqual(
+            build_sparkline([4, 4]),
+            "4.0,24.0 156.0,24.0",
+        )
+
     def staff_request(self):
         return SimpleNamespace(
             user=SimpleNamespace(
