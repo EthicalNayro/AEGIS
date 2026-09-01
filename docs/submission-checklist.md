@@ -6,29 +6,31 @@ Use this checklist immediately before presenting or submitting AEGIS.
 
 ## Final Runtime Gate
 
-The repository now contains a reproducible acceptance test:
+The repository contains a reproducible acceptance test:
 
 ```bash
 bash scripts/final-acceptance.sh
 ```
 
-Do not declare the post-ExternalDNS platform final until that command finishes with:
+Final accepted result:
 
 ```text
-AEGIS TECHNICAL VALIDATION: COMPLETE
+AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)
 ```
 
 Final runtime items:
 
-- [ ] `aegis-status-page` is `Synced / Healthy`
-- [ ] `aegis-observability` is `Synced / Healthy`
-- [ ] `aegis-external-dns` rollout is healthy
-- [ ] ExternalDNS remains in intentional `--dry-run` mode
-- [ ] ExternalDNS least-privilege RBAC checks pass
-- [ ] GitOps digest equals the running Status-Page digest
-- [ ] at least two Status-Page replicas are Ready across two Availability Zones
-- [ ] public `https://app.aegis-project.ddnsfree.com/healthz` returns `HTTP 200` and `ok`
-- [ ] final acceptance script passes end to end
+- [x] `aegis-status-page` is `Synced / Healthy`
+- [x] `aegis-observability` is `Synced / Healthy`
+- [x] `aegis-external-dns` rollout is healthy
+- [x] ExternalDNS remains in intentional `--dry-run` mode
+- [x] ExternalDNS least-privilege RBAC checks pass
+- [x] GitOps digest equals all running Status-Page application-image digests
+- [x] at least two Status-Page replicas are Ready across two Availability Zones
+- [x] public `https://app.aegis-project.ddnsfree.com/healthz` returns `HTTP 200` and `ok`
+- [x] final acceptance script passes end to end
+
+See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check proof and scope.
 
 ---
 
@@ -56,6 +58,7 @@ Final runtime items:
 - [x] Prometheus / Grafana stack validated
 - [x] custom AEGIS Platform Health dashboard validated
 - [x] Karpenter recovery under Pod-density pressure validated
+- [x] node-exporter scheduling resilience hardened with `system-cluster-critical` priority
 
 ---
 
@@ -73,6 +76,7 @@ Final runtime items:
 - [x] duplicate legacy Status-Page production manifests retired
 - [x] local Terraform state/plans ignored
 - [x] editor swap/backup artifacts ignored
+- [x] local static-generation scratch artifacts explicitly ignored
 - [x] password-handling Ansible tasks use `no_log: true`
 
 ---
@@ -83,7 +87,7 @@ Final runtime items:
 - [x] Screenshot 91 — live Kubernetes telemetry in Grafana
 - [ ] Screenshot 92 — final corrected **AEGIS Platform Health** dashboard copied into `docs/screenshots/`
 - [ ] Screenshot 93 — healthy ExternalDNS Dynu dry-run proof copied into `docs/screenshots/`
-- [ ] final post-ExternalDNS acceptance output captured
+- [ ] final 12-check acceptance output screenshot copied into `docs/screenshots/`
 
 Do not mark an evidence item complete merely because its filename is listed in documentation; keep the original screenshot in `docs/screenshots/`.
 
@@ -98,8 +102,8 @@ Do not mark an evidence item complete merely because its filename is listed in d
 - [x] observability documentation includes Prometheus/Grafana and CloudWatch as complementary planes
 - [x] ExternalDNS is explicitly documented as `--dry-run`, not active DNS mutation
 - [x] known limitations are explicit
-- [x] validation documentation now distinguishes historical proof from the current final gate
-- [ ] evidence index updated after Screenshots 92 and 93 are physically present
+- [x] dedicated final acceptance proof records the successful 12-check gate
+- [ ] evidence index updated after Screenshots 92, 93, and the final acceptance capture are physically present
 
 ---
 
@@ -115,6 +119,7 @@ AEGIS can accurately claim:
 - secure CI using GitHub OIDC;
 - immutable container delivery with Trivy and CycloneDX SBOM evidence;
 - GitOps deployment through Argo CD;
+- final runtime acceptance with 12 automated checks passing;
 - database migration as a PreSync release step;
 - WAF-to-SQS security-event processing;
 - Amazon Bedrock AI-assisted analysis;
@@ -124,6 +129,7 @@ AEGIS can accurately claim:
 - human-verified AI-quality metrics;
 - Prometheus/Grafana Kubernetes observability;
 - Karpenter capacity recovery;
+- node-level observability protected with cluster-critical scheduling priority;
 - a safety-bounded ExternalDNS/Dynu integration in dry-run mode.
 
 ---
@@ -153,14 +159,16 @@ Present these as boundaries or future hardening opportunities.
 3. Show the AEGIS analyst command center.
 4. Explain ALB + ACM + WAF as the public trust boundary.
 5. Show two application Pods distributed across Availability Zones.
-6. Show Argo CD `Synced / Healthy` and the PreSync migration evidence.
-7. Show the successful GitHub Actions secure CI run.
-8. Explain OIDC, immutable ECR delivery, Trivy, and the SBOM.
-9. Show a controlled WAF block and trace `WAF -> CloudWatch -> EventBridge -> SQS -> Analyzer -> Bedrock -> DynamoDB`.
-10. Show the human-review workflow and AI-quality metrics.
-11. Show Prometheus/Grafana and the AEGIS Platform Health dashboard.
-12. Show ExternalDNS in safe Dynu dry-run mode and explain why writes are deliberately disabled.
-13. Finish with the final acceptance gate and the architecture safety enhancements.
+6. Show Argo CD `Synced / Healthy` for both application and observability.
+7. Show the final acceptance result: `AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)`.
+8. Show the successful GitHub Actions secure CI run.
+9. Explain OIDC, immutable ECR delivery, Trivy, and the SBOM.
+10. Show a controlled WAF block and trace `WAF -> CloudWatch -> EventBridge -> SQS -> Analyzer -> Bedrock -> DynamoDB`.
+11. Show the human-review workflow and AI-quality metrics.
+12. Show Prometheus/Grafana and the AEGIS Platform Health dashboard.
+13. Explain the node-exporter pod-pressure incident and cluster-critical scheduling hardening.
+14. Show ExternalDNS in safe Dynu dry-run mode and explain why writes are deliberately disabled.
+15. Finish with the architecture safety enhancements and fail-closed engineering stories.
 
 ---
 
@@ -171,10 +179,10 @@ These improve portfolio maturity but are not blockers for the technical project:
 - [ ] protect `main` and require successful CI before merge
 - [ ] use signed commits/tags or artifact signing/attestation
 - [ ] update the GitHub repository description to reflect the current EKS/GitOps/AI-security platform
-- [ ] create a final `v1.0.0` release/tag after the acceptance gate passes
+- [ ] create a final `v1.0.0` release/tag
 
 ---
 
 ## Final Freeze Rule
 
-After `scripts/final-acceptance.sh` passes and the final evidence is copied into the repository, do not add new runtime features for presentation polish. Limit changes to documentation, diagrams, evidence organization, and fixes for proven defects.
+The technical freeze point has been reached after the successful 12-check final acceptance run. Avoid adding new runtime features for presentation polish. Limit changes to documentation, diagrams, evidence organization, and fixes for proven defects.
