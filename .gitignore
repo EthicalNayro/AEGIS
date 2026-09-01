@@ -43,6 +43,10 @@ staticfiles/
 media/
 logs/
 
+# Local static-generation scratch artifacts
+/status-page/statuspage/project-static/dist/mdi-icon-rules.css
+/status-page/statuspage/project-static/dist/woff2.b64
+
 *.egg-info/
 
 # Terraform local plan artifacts
