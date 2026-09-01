@@ -2,18 +2,18 @@
   <title id="title">AEGIS final platform architecture</title>
   <desc id="desc">Final accepted AEGIS architecture showing public edge, private Amazon EKS runtime, managed data services, AI security services, GitOps delivery and DNS safety boundary.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#07111f"/><stop offset="1" stop-color="#0b1220"/></linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity=".28"/></filter>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#67e8f9"/></marker>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f7faff"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="7" stdDeviation="10" flood-color="#0b1d4d" flood-opacity=".08"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#1553e8"/></marker>
     <marker id="arrowMuted" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker>
     <style>
-      .title{font:700 34px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.sub{font:400 17px Inter,Segoe UI,Arial,sans-serif;fill:#94a3b8}.section{font:700 15px Inter,Segoe UI,Arial,sans-serif;letter-spacing:2px;fill:#cbd5e1}.label{font:700 17px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.small{font:400 13px Inter,Segoe UI,Arial,sans-serif;fill:#94a3b8}.tiny{font:600 12px Inter,Segoe UI,Arial,sans-serif;fill:#cbd5e1}.box{fill:#111c2e;stroke:#334155;stroke-width:1.5}.aws{fill:#24180b;stroke:#f59e0b;stroke-width:1.5}.sec{fill:#21131c;stroke:#fb7185;stroke-width:1.5}.git{fill:#14172d;stroke:#818cf8;stroke-width:1.5}.obs{fill:#0d2020;stroke:#2dd4bf;stroke-width:1.5}.data{fill:#151629;stroke:#a78bfa;stroke-width:1.5}.cluster{fill:#0b1727;stroke:#334155;stroke-width:2}.eks{fill:#0b1c2c;stroke:#38bdf8;stroke-width:2}.line{stroke:#67e8f9;stroke-width:2.5;fill:none;marker-end:url(#arrow)}.muted{stroke:#64748b;stroke-width:2;stroke-dasharray:7 7;fill:none;marker-end:url(#arrowMuted)}
+      .title{font:800 40px Inter,Segoe UI,Arial,sans-serif;fill:#0b1d4d}.sub{font:600 18px Inter,Segoe UI,Arial,sans-serif;fill:#1553e8}.section{font:800 15px Inter,Segoe UI,Arial,sans-serif;letter-spacing:1.5px;fill:#1553e8}.label{font:700 17px Inter,Segoe UI,Arial,sans-serif;fill:#14213d}.small{font:400 13px Inter,Segoe UI,Arial,sans-serif;fill:#53627a}.tiny{font:700 12px Inter,Segoe UI,Arial,sans-serif;fill:#14213d}.box{fill:#ffffff;stroke:#8db1ff;stroke-width:1.5}.aws{fill:#fffaf2;stroke:#f59e0b;stroke-width:1.5}.sec{fill:#fff8f8;stroke:#ef5c61;stroke-width:1.5}.git{fill:#faf8ff;stroke:#7955d8;stroke-width:1.5}.obs{fill:#f4fffd;stroke:#2ca7a0;stroke-width:1.5}.data{fill:#faf8ff;stroke:#8b6fe8;stroke-width:1.5}.cluster{fill:#ffffff;stroke:#8db1ff;stroke-width:2}.eks{fill:#f8fbff;stroke:#4383ef;stroke-width:2}.line{stroke:#1553e8;stroke-width:2.5;fill:none;marker-end:url(#arrow)}.muted{stroke:#64748b;stroke-width:2;stroke-dasharray:7 7;fill:none;marker-end:url(#arrowMuted)}
     </style>
   </defs>
   <rect width="1600" height="940" fill="url(#bg)"/>
-  <circle cx="1430" cy="90" r="190" fill="#0ea5e9" opacity=".06"/><circle cx="110" cy="850" r="220" fill="#8b5cf6" opacity=".05"/>
-  <text x="70" y="68" class="title">AEGIS — Final Platform Architecture</text>
-  <text x="70" y="98" class="sub">Accepted showcase state · Amazon EKS · private workers · two Availability Zones · human-governed AI</text>
+  <circle cx="1430" cy="90" r="190" fill="#1553e8" opacity=".025"/><circle cx="110" cy="850" r="220" fill="#7955d8" opacity=".025"/>
+  <text x="800" y="62" text-anchor="middle" class="title">AEGIS – Platform Architecture</text>
+  <text x="800" y="96" text-anchor="middle" class="sub">01 – Final EKS Runtime Architecture</text>
 
   <rect x="55" y="145" width="300" height="610" rx="24" class="cluster"/>
   <text x="80" y="180" class="section">PUBLIC EDGE</text>
@@ -23,8 +23,8 @@
   <text x="205" y="360" text-anchor="middle" class="label">Dynu DNS</text><text x="205" y="382" text-anchor="middle" class="small">app.aegis-project.ddnsfree.com</text>
   <rect x="90" y="455" width="230" height="110" rx="16" class="aws"/>
   <text x="205" y="487" text-anchor="middle" class="label">Application Load Balancer</text><text x="205" y="511" text-anchor="middle" class="small">Internet-facing · HTTPS :443</text>
-  <rect x="110" y="528" width="82" height="24" rx="12" fill="#3b1d24" stroke="#fb7185"/><text x="151" y="545" text-anchor="middle" class="tiny">AWS WAF</text>
-  <rect x="210" y="528" width="82" height="24" rx="12" fill="#2b1f0c" stroke="#f59e0b"/><text x="251" y="545" text-anchor="middle" class="tiny">ACM TLS</text>
+  <rect x="110" y="528" width="82" height="24" rx="12" fill="#fff4f4" stroke="#ef5c61"/><text x="151" y="545" text-anchor="middle" class="tiny">AWS WAF</text>
+  <rect x="210" y="528" width="82" height="24" rx="12" fill="#fff8e8" stroke="#f59e0b"/><text x="251" y="545" text-anchor="middle" class="tiny">ACM TLS</text>
   <rect x="90" y="620" width="230" height="82" rx="16" class="box"/>
   <text x="205" y="653" text-anchor="middle" class="label">Kubernetes Ingress</text><text x="205" y="676" text-anchor="middle" class="small">ALB controller target</text>
   <path d="M205 289 V330" class="line"/><path d="M205 404 V455" class="line"/><path d="M205 565 V620" class="line"/>
@@ -32,7 +32,7 @@
   <rect x="390" y="145" width="760" height="610" rx="24" class="cluster"/>
   <text x="420" y="180" class="section">AEGIS VPC 10.10.0.0/16 · US-EAST-1</text>
   <rect x="420" y="205" width="700" height="410" rx="22" class="eks"/>
-  <text x="450" y="240" class="section" fill="#7dd3fc">AMAZON EKS · PRIVATE WORKERS · MULTI-AZ</text>
+  <text x="450" y="240" class="section">AMAZON EKS · PRIVATE WORKERS · MULTI-AZ</text>
 
   <rect x="455" y="275" width="210" height="88" rx="16" class="box"/><text x="560" y="307" text-anchor="middle" class="label">Status-Page</text><text x="560" y="330" text-anchor="middle" class="small">multiple web replicas</text><text x="560" y="348" text-anchor="middle" class="small">probes + PDB + topology spread</text>
   <rect x="455" y="405" width="210" height="88" rx="16" class="box"/><text x="560" y="437" text-anchor="middle" class="label">Human Review</text><text x="560" y="460" text-anchor="middle" class="small">staff-only analyst console</text><text x="560" y="478" text-anchor="middle" class="small">conditional verdict update</text>
