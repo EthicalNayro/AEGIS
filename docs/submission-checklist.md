@@ -46,11 +46,14 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check runtime 
 - [x] analyzer source committed
 - [x] Status-Page AEGIS plugin/UI committed
 - [x] human-review and AI-quality scripts committed
+- [x] observability and ExternalDNS source committed
 - [x] duplicate legacy Status-Page production manifests retired
 - [x] local Terraform state/plans ignored
 - [x] editor swap/backup artifacts ignored
 - [x] local static-generation scratch artifacts ignored explicitly
 - [x] database password-handling Ansible tasks use `no_log: true`
+- [x] active third-party GitHub Actions are pinned by commit SHA
+- [x] Terraform CI validates both `dev` and `eks-dev`
 
 ---
 
@@ -58,15 +61,43 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check runtime 
 
 - [x] README describes EKS as current state, not future state
 - [x] architecture documentation describes private EKS workers and managed data services
-- [x] deployment documentation describes GitHub Actions as CI and Argo CD as CD
-- [x] security documentation includes WAF, Pod Identity, OIDC, secrets, supply-chain controls, and AI governance
-- [x] validation document records final acceptance matrix
-- [x] dedicated final acceptance proof records the successful 12-check gate
-- [x] Phase 1.1 document is marked complete/deployed
-- [x] Architecture Safety Enhancements are documented
-- [x] evidence index distinguishes historical EC2 evidence from final EKS evidence
+- [x] networking documentation describes VPC `10.10.0.0/16` and marks the EC2 network historical
+- [x] disaster-recovery document reflects current Multi-AZ/PITR capabilities without claiming untested restore drills
+- [x] architecture decisions describe implemented state rather than obsolete future plans
+- [x] deployment documentation describes GitHub Actions as CI and Argo CD as Kubernetes CD
+- [x] Terraform CI is documented as validation-only, not as an unimplemented automated apply path
+- [x] security documentation includes WAF, Pod Identity, OIDC, secrets, supply-chain controls, ExternalDNS safety, and AI governance
+- [x] WAF/ACM are modeled as ALB associations rather than serial network hops
+- [x] validation document records the final accepted 12-check state
+- [x] dedicated final acceptance proof records the successful gate
+- [x] Architecture Safety Enhancements include the final DNS and Pod-density resilience controls
+- [x] focused final Mermaid architecture sources are committed
+- [x] historical Phase 1 PNG diagrams are explicitly labeled non-authoritative for the final runtime
+- [x] evidence index distinguishes runtime acceptance from screenshot packaging
 - [x] known limitations are explicit
 - [x] ExternalDNS is described accurately as deployed/validated in dry-run, not as active Dynu automation
+
+---
+
+## Evidence Packaging
+
+These items do **not** block technical acceptance; they improve the final submission package.
+
+- [ ] copy the final corrected Platform Health screenshot as `docs/screenshots/92-aegis-grafana-platform-health-dashboard.png`
+- [ ] capture/copy ExternalDNS dry-run evidence as `docs/screenshots/93-aegis-externaldns-dynu-dry-run.png` without exposing the Dynu API key
+- [ ] copy the final 12-check output as `docs/screenshots/95-aegis-final-acceptance-12-checks.png`
+- [ ] change the corresponding entries in [`evidence.md`](evidence.md) from pending to captured after the files physically exist
+
+---
+
+## GitHub Portfolio Settings
+
+These are repository-hosting polish rather than runtime engineering blockers.
+
+- [ ] update the GitHub repository description to mention EKS, GitOps, Bedrock, and human-governed security operations
+- [ ] add topics such as `kubernetes`, `eks`, `gitops`, `argocd`, `prometheus`, `grafana`, and `karpenter`
+- [ ] protect `main` and require the relevant CI checks before merge
+- [ ] optionally create/sign a final `v1.0.0` release or add artifact attestation
 
 ---
 
