@@ -30,8 +30,8 @@ flowchart TB
       RQPDB[RQ worker PDB] -. protects .-> RQ
       SCHED[RQ scheduler\nsingleton + Recreate]
 
-      KARP[Karpenter NodePool\nSpot + On-Demand] --> CAP[Additional node capacity]
-      CAP -. scheduling recovery .-> EKS
+      KARP[Karpenter NodePool\nSpot + On-Demand] --> N3[Additional Karpenter node\nwhen capacity is required]
+      N3 -. new scheduling capacity .-> RQ
 
       PRIORITY[node-exporter\npriorityClassName:\nsystem-cluster-critical]
       PRIORITY -. protects node telemetry\nunder Pod-density pressure .-> NE1
