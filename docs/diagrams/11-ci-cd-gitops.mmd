@@ -1,0 +1,28 @@
+flowchart LR
+    DEV[Developer commit] --> GH[GitHub repository]
+
+    GH --> CI[Status-Page Secure CI]
+    CI --> V[Validate source + renderer]
+    V --> BUILD[Build container]
+    BUILD --> TRIVY[Trivy report +\nfail-closed CRITICAL gate]
+    TRIVY --> SBOM[CycloneDX SBOM]
+    SBOM --> OIDC[GitHub OIDC -> AWS STS]
+    OIDC --> ECR[Immutable ECR image\ngit-<commit>]
+    ECR --> DIGEST[Resolve sha256 digest]
+
+    DIGEST --> GUARD[Guarded GitOps update]
+    GH -. newer source check .-> GUARD
+    GUARD -->|safe| GITOPS[gitops/eks-dev/kustomization.yaml]
+    GUARD -->|stale non-GitOps source| STOP[Fail closed]
+
+    GITOPS --> ARGO[Argo CD]
+    ARGO --> PRESYNC[PreSync migration Job]
+    PRESYNC --> EKS[Status-Page rollout on EKS]
+
+    EKS --> VERIFY[Final acceptance:\nGit digest == runtime digest]
+
+    TFCI[Terraform CI\ndev + eks-dev] --> TFV[fmt / init -backend=false / validate]
+    GH --> TFCI
+
+    note1[CI has ECR delivery rights\nand no EKS deployment rights]
+    CI -. trust boundary .-> note1
