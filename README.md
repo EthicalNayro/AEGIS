@@ -35,9 +35,9 @@ The validated showcase environment is `eks-dev` in `us-east-1`. Its HTTPS endpoi
 
 ## Analyst experience
 
-![AEGIS security findings command center](docs/screenshots/94-aegis-security-command-center.png)
+![AEGIS security findings command center](docs/screenshots/82-aegis-public-https-human-review-platform.png)
 
-<p align="center"><sub>Deployed AEGIS analyst workspace: KPI-driven triage, severity and review-state filters, confidence visualization, and direct case access.</sub></p>
+<p align="center"><sub>AEGIS over public HTTPS: KPI-driven triage, severity and review-state filters, confidence visualization, and direct case access.</sub></p>
 
 The native Status-Page plugin provides:
 
@@ -50,6 +50,25 @@ The native Status-Page plugin provides:
 - a staff-protected observability workspace with embedded Grafana dashboards.
 
 The plugin is isolated under `status-page/statuspage/aegis_review/`. Upstream application logic remains intact; only a limited presentation layer is adapted to create a coherent AEGIS operations experience.
+
+## Visual tour
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/60-aegis-https-tls-working.png" alt="AEGIS public HTTPS and TLS validation"><br><strong>Public HTTPS edge</strong><br><sub>ACM-backed TLS through the public ALB.</sub></td>
+    <td width="50%"><img src="docs/screenshots/61-aws-waf-blocks-malicious-xss-request.png" alt="AWS WAF blocking a malicious XSS request"><br><strong>WAF enforcement</strong><br><sub>Controlled malicious traffic blocked before EKS.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/74-aegis-bedrock-ai-security-classification.png" alt="Amazon Bedrock security classification"><br><strong>AI-assisted classification</strong><br><sub>Bedrock produces structured, advisory security analysis.</sub></td>
+    <td width="50%"><img src="docs/screenshots/79-aegis-cloudwatch-ai-quality-feedback-dashboard.png" alt="CloudWatch AI quality feedback dashboard"><br><strong>Measured feedback</strong><br><sub>Human-reviewed outcomes become observable quality signals.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/83-aegis-argocd-gitops-synced-healthy.png" alt="Argo CD application synced and healthy"><br><strong>GitOps convergence</strong><br><sub>Argo CD reconciles the declared runtime state.</sub></td>
+    <td width="50%"><img src="docs/screenshots/91-aegis-grafana-kubernetes-observability.png" alt="Grafana Kubernetes observability dashboard"><br><strong>Platform observability</strong><br><sub>Live Kubernetes telemetry for the AEGIS namespace.</sub></td>
+  </tr>
+</table>
+
+The complete, numbered validation trail is indexed under [`docs/screenshots/`](docs/screenshots/) and mapped to project claims in the [evidence index](docs/evidence.md).
 
 ## How a finding becomes a decision
 
@@ -129,7 +148,7 @@ GitHub Actions has no EKS deployment permission. CI publishes an immutable artif
 
 ### Security and AI governance
 
-- AWS managed WAF rules, rate limiting, block logging, and controlled XSS validation
+- AWS managed WAF rules, controlled XSS validation, and a dashboard-safe per-IP limit of 500 requests per rolling minute
 - EventBridge-driven delivery with SQS buffering and dead-letter protection
 - least-privilege EKS Pod Identity with no application AWS keys in source or images
 - Amazon Bedrock `amazon.nova-pro-v1:0` with structured-output validation

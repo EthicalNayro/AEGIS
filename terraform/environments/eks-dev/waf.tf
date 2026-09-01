@@ -108,8 +108,11 @@ resource "aws_wafv2_web_acl" "aegis" {
   # ------------------------------------------------
   # Per-IP Rate Limiting
   #
-  # Blocks clients that exceed 100 requests during
-  # a rolling 60-second evaluation window.
+  # Blocks clients that exceed 500 requests during
+  # a rolling 60-second evaluation window. This keeps
+  # sustained abusive clients bounded while allowing
+  # the AEGIS dashboard and embedded Grafana panels to
+  # load and refresh without false-positive blocking.
   #
   # Each source IP is tracked independently.
   # ------------------------------------------------
@@ -119,12 +122,21 @@ resource "aws_wafv2_web_acl" "aegis" {
     priority = 40
 
     action {
-      block {}
+      block {
+        custom_response {
+          response_code = 429
+
+          response_header {
+            name  = "Retry-After"
+            value = "60"
+          }
+        }
+      }
     }
 
     statement {
       rate_based_statement {
-        limit                 = 20
+        limit                 = 500
         aggregate_key_type    = "IP"
         evaluation_window_sec = 60
       }

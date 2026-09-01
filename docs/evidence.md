@@ -8,18 +8,18 @@ This index maps major AEGIS claims to the validation evidence collected during i
 
 | Evidence | What it proves |
 |---|---|
-| `83-aegis-argocd-gitops-synced-healthy.png` | Argo CD Application reached `Synced` and `Healthy` |
+| [`83-aegis-argocd-gitops-synced-healthy.png`](screenshots/83-aegis-argocd-gitops-synced-healthy.png) | Argo CD Application reached `Synced` and `Healthy` |
 | `84` drift/self-heal evidence | Argo CD reconciles runtime drift back to Git desired state |
-| `85-aegis-secure-ci-oidc-ecr-gitops.png` | secure CI path, GitHub OIDC, ECR delivery, GitOps digest update, and digest-match proof |
-| `86-aegis-argocd-presync-database-migration.png` | database migration Job completed successfully as an Argo CD `PreSync` hook |
-| `87-aegis-sbom-idempotent-ci-rerun.png` | CycloneDX SBOM generation, safe rerun/idempotent ECR behavior, and GitOps synchronization |
-| `88-aegis-multistage-runtime-hardening.png` | multi-stage container build rolled out to healthy application replicas |
-| `89-aegis-final-gitops-runtime-verification.png` | final GitOps/runtime verification: Argo status, digest consistency, replicas, multi-AZ placement, and HTTPS health |
-| `90-aegis-observability-gitops-synced.png` | Prometheus and Grafana observability application reached GitOps `Synced` / `Healthy` state |
-| `91-aegis-grafana-kubernetes-observability.png` | live Kubernetes dashboards for the `aegis-system` namespace |
+| [`85-aegis-secure-ci-oidc-ecr-gitops.png`](screenshots/85-aegis-secure-ci-oidc-ecr-gitops.png) | secure CI path, GitHub OIDC, ECR delivery, GitOps digest update, and digest-match proof |
+| [`86-aegis-argocd-presync-database-migration.png`](screenshots/86-aegis-argocd-presync-database-migration.png) | database migration Job completed successfully as an Argo CD `PreSync` hook |
+| [`87-aegis-sbom-idempotent-ci-rerun.png`](screenshots/87-aegis-sbom-idempotent-ci-rerun.png) | CycloneDX SBOM generation, safe rerun/idempotent ECR behavior, and GitOps synchronization |
+| [`88-aegis-multistage-runtime-hardening.png`](screenshots/88-aegis-multistage-runtime-hardening.png) | multi-stage container build rolled out to healthy application replicas |
+| [`89-aegis-final-gitops-runtime-verification.png`](screenshots/89-aegis-final-gitops-runtime-verification.png) | final GitOps/runtime verification: Argo status, digest consistency, replicas, multi-AZ placement, and HTTPS health |
+| [`90-aegis-prometheus-grafana-gitops-synced.png`](screenshots/90-aegis-prometheus-grafana-gitops-synced.png) | Prometheus and Grafana observability application reached GitOps `Synced` / `Healthy` state |
+| [`91-aegis-grafana-kubernetes-observability.png`](screenshots/91-aegis-grafana-kubernetes-observability.png) | live Kubernetes dashboards for the `aegis-system` namespace |
 | `92-aegis-platform-health-dashboard.png` | custom AEGIS Platform Health dashboard and corrected health semantics |
 | `93-aegis-external-dns-dynu-dry-run.png` | namespace-scoped ExternalDNS discovered only the intended AEGIS record in dry-run mode |
-| `94-aegis-security-command-center.png` | deployed analyst command center with KPIs, filters, confidence, severity, status, and case navigation |
+| [`94-aegis-security-command-center.png`](screenshots/94-aegis-security-command-center.png) | deployed analyst command center with KPIs, filters, confidence, severity, status, and case navigation |
 
 Where a screenshot has not yet been copied into `docs/screenshots/`, the filename above records the evidence naming convention used during project validation. Do not treat the index itself as a substitute for the original captured evidence.
 
@@ -59,6 +59,8 @@ This digest is useful as historical evidence for the final validation run; futur
 
 Later UI and secured-observability releases intentionally produced newer immutable images. The historical digest above remains evidence for its named acceptance run rather than a claim that it is the current runtime digest.
 
+![Final GitOps and runtime verification](screenshots/89-aegis-final-gitops-runtime-verification.png)
+
 ---
 
 ## Secure CI Proof
@@ -92,6 +94,8 @@ The resulting GitOps bot commit was:
 cff74a1 chore(gitops): deploy git-b815930713e3 [skip ci]
 ```
 
+![Secure CI, OIDC, ECR, and GitOps evidence](screenshots/85-aegis-secure-ci-oidc-ecr-gitops.png)
+
 ---
 
 ## Fail-Closed Delivery Proof
@@ -124,6 +128,10 @@ Validated public-path behaviors included:
 
 The WAF/CloudWatch/EventBridge/SQS path was then used as input to the security analyzer.
 
+The rate-limit proof was originally captured with a deliberately low test threshold. The production-style configuration is now tuned to 500 requests per rolling 60-second window so dashboard/Grafana traffic does not cause false positives. A genuine limit breach returns `429 Too Many Requests` with `Retry-After: 60`; managed-rule security blocks continue to return `403`.
+
+![AWS WAF blocks a controlled XSS request](screenshots/61-aws-waf-blocks-malicious-xss-request.png)
+
 ---
 
 ## Analyzer / AI Proof
@@ -141,6 +149,8 @@ SQS receive
 ```
 
 The production workload uses a dedicated Pod Identity scoped to the analyzer service account.
+
+![Amazon Bedrock security classification](screenshots/74-aegis-bedrock-ai-security-classification.png)
 
 ---
 
@@ -162,6 +172,8 @@ The production UI was subsequently hardened so the verdict buttons submit an exp
 11dbe4c fix(ui): make human verdict submission reliable
 ```
 
+![Human review feedback recorded](screenshots/77-aegis-human-review-feedback-recorded.png)
+
 ---
 
 ## AI Quality Proof
@@ -173,6 +185,8 @@ AEGIS/AIQuality
 ```
 
 The tooling distinguishes preliminary sample sizes with `EARLY_SAMPLE` instead of overstating model performance.
+
+![CloudWatch AI quality feedback dashboard](screenshots/79-aegis-cloudwatch-ai-quality-feedback-dashboard.png)
 
 ---
 
@@ -196,6 +210,8 @@ The primary UI and verdict hardening commits are:
 11dbe4c fix(ui): make human verdict submission reliable
 ```
 
+![AEGIS public HTTPS analyst workspace](screenshots/82-aegis-public-https-human-review-platform.png)
+
 ---
 
 ## Observability Proof
@@ -217,6 +233,8 @@ The implementation is represented by:
 55dbaf1 fix(observability): correct AEGIS dashboard health semantics
 85d53a9 feat(observability): embed secured Grafana dashboards
 ```
+
+![Grafana Kubernetes observability for AEGIS](screenshots/91-aegis-grafana-kubernetes-observability.png)
 
 ---
 
@@ -251,6 +269,8 @@ Validation covered:
 - HPA scaling on a dedicated demo workload.
 
 Status-Page web HPA is not claimed as active production configuration.
+
+![Karpenter automatic node scale-up](screenshots/55-karpenter-automatic-node-scale-up.png)
 
 ---
 
