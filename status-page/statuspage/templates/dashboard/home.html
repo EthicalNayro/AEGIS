@@ -1,129 +1,171 @@
 {% extends 'base/dashboard.html' %}
 
-{% block title %}
-Dashboard
+{% block title %}Security Operations Overview{% endblock %}
+{% block eyebrow %}AEGIS / COMMAND OVERVIEW{% endblock %}
+{% block subtitle %}A unified view of threat activity, analyst workload, platform health, and operational readiness.{% endblock %}
+
+{% block controls %}
+  {% if aegis_enabled and not aegis_restricted %}
+    <a href="{% url 'plugins:aegis_review:findings' %}"><i class="mdi mdi-shield-search-outline" aria-hidden="true"></i> Review findings</a>
+    <a href="{% url 'plugins:aegis_review:observability' %}"><i class="mdi mdi-chart-box-outline" aria-hidden="true"></i> Open observability</a>
+  {% endif %}
 {% endblock %}
 
 {% block dashboard_content %}
   <div class="ops-dashboard">
-    <dl class="ops-kpi-grid">
-      {% if perms.incidents.view_incident %}
-      <div class="relative overflow-hidden rounded-lg bg-white dark:bg-zinc-800 px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6">
-        <dt>
-          <div class="absolute rounded-md bg-indigo-500 p-3 text-white">
-            <!-- Heroicon name: outline/exclamation-triangle -->
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-          </div>
-          <p class="ml-16 truncate text-sm font-medium text-gray-500">Open Incidents</p>
-        </dt>
-        <dd class="ml-16 flex items-baseline pb-6 sm:pb-7">
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ open_incidents }}</p>
-          <div class="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-zinc-900 px-4 py-4 sm:px-6">
-            <div class="text-sm">
-              <a href="{% url 'incidents:incident_list' %}" class="font-medium text-indigo-600 hover:text-indigo-500"> View all<span class="sr-only"> Total Open Incidents</span></a>
-            </div>
-          </div>
-        </dd>
+    <section class="ops-command-hero" aria-labelledby="ops-command-title">
+      <div class="ops-command-copy">
+        <div class="ops-live-label"><span aria-hidden="true"></span> LIVE CONTROL PLANE</div>
+        <h2 id="ops-command-title">Your security posture.<br><em>One operational picture.</em></h2>
+        <p>Correlate WAF evidence, AI decisions, human review, and Kubernetes telemetry without leaving the AEGIS control plane.</p>
+        <div class="ops-trust-signals" aria-label="Platform protection signals">
+          <span><i class="mdi mdi-shield-check-outline" aria-hidden="true"></i> WAF protected</span>
+          <span><i class="mdi mdi-robot-outline" aria-hidden="true"></i> AI-assisted triage</span>
+          <span><i class="mdi mdi-kubernetes" aria-hidden="true"></i> aegis-system</span>
+        </div>
       </div>
-      {% endif %}
-
-      {% if perms.maintenances.view_maintenance %}
-      <div class="relative overflow-hidden rounded-lg bg-white dark:bg-zinc-800 px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6">
-        <dt>
-          <div class="absolute rounded-md bg-indigo-500 p-3 text-white">
-            <!-- Heroicon name: outline/wrench -->
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75a4.5 4.5 0 01-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 11-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 016.336-4.486l-3.276 3.276a3.004 3.004 0 002.25 2.25l3.276-3.276c.256.565.398 1.192.398 1.852z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4.867 19.125h.008v.008h-.008v-.008z" />
-            </svg>
-          </div>
-          <p class="ml-16 truncate text-sm font-medium text-gray-500">Open Maintenances</p>
-        </dt>
-        <dd class="ml-16 flex items-baseline pb-6 sm:pb-7">
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ open_maintenances }}</p>
-          <div class="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-zinc-900 px-4 py-4 sm:px-6">
-            <div class="text-sm">
-              <a href="{% url 'maintenances:maintenance_list' %}" class="font-medium text-indigo-600 hover:text-indigo-500"> View all<span class="sr-only"> Total Open Maintenances</span></a>
-            </div>
-          </div>
-        </dd>
-      </div>
-      {% endif %}
-
-      {% if perms.maintenances.view_maintenance %}
-      <div class="relative overflow-hidden rounded-lg bg-white dark:bg-zinc-800 px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6">
-        <dt>
-          <div class="absolute rounded-md bg-indigo-500 p-3 text-white">
-            <!-- Heroicon name: outline/clock -->
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p class="ml-16 truncate text-sm font-medium text-gray-500">Upcoming Maintenances</p>
-        </dt>
-        <dd class="ml-16 flex items-baseline pb-6 sm:pb-7">
-          <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ upcoming_maintenances }}</p>
-          <div class="absolute inset-x-0 bottom-0 bg-gray-50 dark:bg-zinc-900 px-4 py-4 sm:px-6">
-            <div class="text-sm">
-              <a href="{% url 'maintenances:maintenance_list' %}" class="font-medium text-indigo-600 hover:text-indigo-500"> View all<span class="sr-only"> Total Upcoming Maintenances</span></a>
-            </div>
-          </div>
-        </dd>
-      </div>
-      {% endif %}
-    </dl>
-
-    <div class="ops-workspace-grid">
-      <section class="ops-panel" aria-labelledby="ops-workspace-title">
-        <header class="ops-panel-head">
-          <div>
-            <h2 id="ops-workspace-title">Security operations workspace</h2>
-            <p>Move from signal to response across the AEGIS control plane.</p>
-          </div>
-          <a href="{% url 'plugins:aegis_review:findings' %}">Open command center <span aria-hidden="true">→</span></a>
-        </header>
-        <div class="ops-capabilities">
-          <a class="ops-capability" href="{% url 'plugins:aegis_review:findings' %}">
-            <i class="mdi mdi-shield-search-outline" aria-hidden="true"></i>
-            <span><strong>AI-assisted review</strong><span>Validate classifications, confidence and WAF evidence.</span></span>
-          </a>
-          {% if perms.incidents.view_incident %}
-          <a class="ops-capability" href="{% url 'incidents:incident_list' %}">
-            <i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i>
-            <span><strong>Incident response</strong><span>Coordinate active impact, ownership and recovery updates.</span></span>
-          </a>
-          {% endif %}
-          {% if perms.components.view_component %}
-          <a class="ops-capability" href="{% url 'components:component_list' %}">
-            <i class="mdi mdi-server-network" aria-hidden="true"></i>
-            <span><strong>Service topology</strong><span>Track critical components and operational dependencies.</span></span>
-          </a>
-          {% endif %}
-          {% if perms.extras.view_objectchange %}
-          <a class="ops-capability" href="{% url 'extras:objectchange_list' %}">
-            <i class="mdi mdi-history" aria-hidden="true"></i>
-            <span><strong>Audit timeline</strong><span>Review administrative actions and platform changes.</span></span>
-          </a>
+      <div class="ops-radar-wrap" aria-label="Analyst review completion {{ aegis_review_completion }} percent">
+        <div class="ops-radar" aria-hidden="true">
+          <span class="ops-radar-ring ops-radar-ring-one"></span>
+          <span class="ops-radar-ring ops-radar-ring-two"></span>
+          <span class="ops-radar-axis ops-radar-axis-x"></span>
+          <span class="ops-radar-axis ops-radar-axis-y"></span>
+          <span class="ops-radar-sweep"></span>
+          <span class="ops-radar-target"></span>
+        </div>
+        <div class="ops-radar-caption">
+          {% if aegis_data_available %}
+            <strong>{{ aegis_review_completion }}%</strong>
+            <span>review completion</span>
+          {% elif aegis_restricted %}
+            <i class="mdi mdi-lock-outline" aria-hidden="true"></i>
+            <span>analyst access required</span>
+          {% else %}
+            <strong>—</strong>
+            <span>telemetry unavailable</span>
           {% endif %}
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section class="ops-panel" aria-labelledby="ops-posture-title">
+    <section class="ops-metric-grid" aria-label="Security operations metrics">
+      <article class="ops-metric-card">
+        <div class="ops-metric-top"><span class="ops-metric-icon is-blue"><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span><span class="ops-metric-trend is-neutral">STATUS PAGE</span></div>
+        <p>Open incidents</p>
+        <strong>{{ open_incidents }}</strong>
+        <footer><span>Active service impact</span>{% if perms.incidents.view_incident %}<a href="{% url 'incidents:incident_list' %}" aria-label="View open incidents"><i class="mdi mdi-arrow-top-right" aria-hidden="true"></i></a>{% endif %}</footer>
+      </article>
+
+      <article class="ops-metric-card{% if aegis_pending_count %} is-attention{% endif %}">
+        <div class="ops-metric-top"><span class="ops-metric-icon is-cyan"><i class="mdi mdi-account-clock-outline" aria-hidden="true"></i></span><span class="ops-metric-trend{% if aegis_pending_count %} is-amber{% else %} is-good{% endif %}">{% if aegis_restricted %}RESTRICTED{% elif aegis_data_error %}UNAVAILABLE{% elif aegis_pending_count %}ACTION REQUIRED{% else %}QUEUE CLEAR{% endif %}</span></div>
+        <p>Awaiting analyst</p>
+        <strong>{% if aegis_restricted or aegis_data_error %}—{% else %}{{ aegis_pending_count }}{% endif %}</strong>
+        <footer><span>Pending human verdict</span>{% if aegis_enabled and not aegis_restricted %}<a href="{% url 'plugins:aegis_review:findings' %}?status=PENDING_REVIEW" aria-label="View findings awaiting analyst review"><i class="mdi mdi-arrow-top-right" aria-hidden="true"></i></a>{% endif %}</footer>
+      </article>
+
+      <article class="ops-metric-card{% if aegis_critical_count %} is-critical{% endif %}">
+        <div class="ops-metric-top"><span class="ops-metric-icon is-red"><i class="mdi mdi-alert-octagon-outline" aria-hidden="true"></i></span><span class="ops-metric-trend{% if aegis_critical_count %} is-red{% else %} is-good{% endif %}">{% if aegis_restricted %}RESTRICTED{% elif aegis_data_error %}UNAVAILABLE{% elif aegis_critical_count %}ELEVATED RISK{% else %}NO EXPOSURE{% endif %}</span></div>
+        <p>Critical exposure</p>
+        <strong>{% if aegis_restricted or aegis_data_error %}—{% else %}{{ aegis_critical_count }}{% endif %}</strong>
+        <footer><span>Critical security findings</span>{% if aegis_enabled and not aegis_restricted %}<a href="{% url 'plugins:aegis_review:findings' %}?severity=CRITICAL" aria-label="View critical findings"><i class="mdi mdi-arrow-top-right" aria-hidden="true"></i></a>{% endif %}</footer>
+      </article>
+
+      <article class="ops-metric-card">
+        <div class="ops-metric-top"><span class="ops-metric-icon is-green"><i class="mdi mdi-check-decagram-outline" aria-hidden="true"></i></span><span class="ops-metric-trend is-good">HUMAN VERIFIED</span></div>
+        <p>Review completion</p>
+        <div class="ops-metric-progress-row">
+          <strong>{% if aegis_restricted or aegis_data_error %}—{% else %}{{ aegis_review_completion }}<small>%</small>{% endif %}</strong>
+          {% if aegis_data_available %}<span class="ops-mini-ring" style="--ops-progress: {{ aegis_review_completion }}%" aria-hidden="true"></span>{% endif %}
+        </div>
+        <footer><span>{{ aegis_reviewed_count }} of {{ aegis_total_count }} findings reviewed</span></footer>
+      </article>
+    </section>
+
+    <div class="ops-primary-grid">
+      <section class="ops-panel ops-threat-panel" aria-labelledby="ops-threat-title">
         <header class="ops-panel-head">
           <div>
-            <h2 id="ops-posture-title">Security posture</h2>
-            <p>Current control-plane readiness.</p>
+            <span class="ops-section-kicker">THREAT ACTIVITY</span>
+            <h2 id="ops-threat-title">Latest security findings</h2>
+            <p>Newest AI-classified WAF events requiring analyst awareness.</p>
           </div>
+          {% if aegis_enabled and not aegis_restricted %}<a href="{% url 'plugins:aegis_review:findings' %}">Open command center <i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
         </header>
-        <div class="ops-posture">
-          <div class="ops-posture-row"><span>WAF telemetry</span><strong>Ingesting</strong></div>
-          <div class="ops-posture-row"><span>AI analyzer</span><strong>Available</strong></div>
-          <div class="ops-posture-row"><span>Human review</span><strong>Enforced</strong></div>
-          <div class="ops-posture-row"><span>Analyst access</span><strong>Protected</strong></div>
-        </div>
+
+        {% if aegis_recent_findings %}
+          <div class="ops-threat-table-wrap">
+            <table class="ops-threat-table">
+              <caption class="sr-only">Five most recent AEGIS security findings</caption>
+              <thead><tr><th>Finding</th><th>AI decision</th><th>Severity</th><th>Confidence</th><th>Status</th><th><span class="sr-only">Action</span></th></tr></thead>
+              <tbody>
+                {% for finding in aegis_recent_findings %}
+                  <tr>
+                    <td><a class="ops-finding-id" href="{% url 'plugins:aegis_review:finding_detail' finding.incident_id %}">{{ finding.incident_id|truncatechars:22 }}</a><small>{{ finding.attack_type|truncatechars:28 }}</small></td>
+                    <td><span class="ops-ai-decision">{{ finding.classification|default:'Unclassified' }}</span><small>{{ finding.country }} · {{ finding.http_method }}</small></td>
+                    <td><span class="ops-risk-badge is-{{ finding.severity|lower }}">{{ finding.severity }}</span></td>
+                    <td>{% if finding.confidence_percent is not None %}<div class="ops-confidence"><span>{{ finding.confidence_percent }}%</span><span class="ops-confidence-track"><i style="--ops-confidence: {{ finding.confidence_percent }}%"></i></span></div>{% else %}<span class="ops-muted-value">N/A</span>{% endif %}</td>
+                    <td><span class="ops-status-badge {% if finding.review_status == 'PENDING_REVIEW' %}is-pending{% else %}is-reviewed{% endif %}">{% if finding.review_status == 'PENDING_REVIEW' %}Pending{% else %}Reviewed{% endif %}</span></td>
+                    <td><a class="ops-row-action" href="{% url 'plugins:aegis_review:finding_detail' finding.incident_id %}" aria-label="Open finding {{ finding.incident_id }}"><i class="mdi mdi-chevron-right" aria-hidden="true"></i></a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% elif aegis_restricted %}
+          <div class="ops-state"><span class="ops-state-icon"><i class="mdi mdi-lock-outline" aria-hidden="true"></i></span><div><h3>Analyst workspace protected</h3><p>Security findings are visible only to active staff analysts.</p></div></div>
+        {% elif aegis_data_error %}
+          <div class="ops-state is-error"><span class="ops-state-icon"><i class="mdi mdi-cloud-alert-outline" aria-hidden="true"></i></span><div><h3>Findings telemetry is temporarily unavailable</h3><p>The dashboard remains usable. Open the command center to retry the protected data source.</p></div></div>
+        {% elif not aegis_enabled %}
+          <div class="ops-state"><span class="ops-state-icon"><i class="mdi mdi-puzzle-outline" aria-hidden="true"></i></span><div><h3>AEGIS Review is not configured</h3><p>Enable the plugin to surface AI-assisted security findings here.</p></div></div>
+        {% else %}
+          <div class="ops-state is-clear"><span class="ops-state-icon"><i class="mdi mdi-shield-check-outline" aria-hidden="true"></i></span><div><h3>No findings in the review queue</h3><p>New WAF events will appear here after the AEGIS analyzer completes classification.</p></div></div>
+        {% endif %}
       </section>
+
+      <aside class="ops-panel ops-control-panel" aria-labelledby="ops-control-title">
+        <header class="ops-panel-head">
+          <div><span class="ops-section-kicker">DEFENSE LAYERS</span><h2 id="ops-control-title">Control posture</h2><p>Configured safeguards across the detection path.</p></div>
+        </header>
+        <div class="ops-control-list">
+          <div class="ops-control-row"><span class="ops-control-icon"><i class="mdi mdi-shield-lock-outline" aria-hidden="true"></i></span><div><strong>Web application firewall</strong><small>Managed WAF telemetry</small></div><span class="ops-control-state is-good">ACTIVE</span></div>
+          <div class="ops-control-row"><span class="ops-control-icon"><i class="mdi mdi-brain" aria-hidden="true"></i></span><div><strong>AI decision service</strong><small>Amazon Bedrock analysis</small></div><span class="ops-control-state is-good">READY</span></div>
+          <div class="ops-control-row"><span class="ops-control-icon"><i class="mdi mdi-account-check-outline" aria-hidden="true"></i></span><div><strong>Human review gate</strong><small>One-time conditional verdict</small></div><span class="ops-control-state is-good">ENFORCED</span></div>
+          <div class="ops-control-row"><span class="ops-control-icon"><i class="mdi mdi-database-lock-outline" aria-hidden="true"></i></span><div><strong>Evidence store</strong><small>Protected DynamoDB records</small></div><span class="ops-control-state{% if aegis_data_error %} is-alert{% else %} is-good{% endif %}">{% if aegis_data_error %}DEGRADED{% else %}DURABLE{% endif %}</span></div>
+        </div>
+        <div class="ops-maintenance-summary">
+          <div><span>Open maintenance</span><strong>{{ open_maintenances }}</strong></div>
+          <div><span>Upcoming</span><strong>{{ upcoming_maintenances }}</strong></div>
+        </div>
+      </aside>
     </div>
+
+    <section class="ops-panel ops-observability-panel" aria-labelledby="ops-observability-title">
+      <header class="ops-panel-head">
+        <div>
+          <span class="ops-section-kicker">KUBERNETES / AEGIS-SYSTEM</span>
+          <h2 id="ops-observability-title">Platform health observability</h2>
+          <p>Live Grafana telemetry for services, pods, restarts, CPU, memory, and cluster readiness.</p>
+        </div>
+        {% if aegis_enabled and not aegis_restricted %}<a href="{% url 'plugins:aegis_review:observability' %}">Explore all dashboards <i class="mdi mdi-open-in-new" aria-hidden="true"></i></a>{% endif %}
+      </header>
+      {% if aegis_platform_dashboard and not aegis_restricted %}
+        <div class="ops-grafana-frame">
+          <div class="ops-grafana-toolbar"><span><i class="mdi mdi-chart-timeline-variant-shimmer" aria-hidden="true"></i> AEGIS Platform Health</span><span><i class="platform-live-dot" aria-hidden="true"></i> Secured gateway · live</span></div>
+          <iframe src="{{ aegis_platform_dashboard.url }}" title="AEGIS Platform Health Grafana dashboard" loading="lazy" referrerpolicy="same-origin"></iframe>
+        </div>
+      {% else %}
+        <div class="ops-observability-placeholder">
+          <span class="ops-state-icon"><i class="mdi mdi-chart-box-outline" aria-hidden="true"></i></span>
+          <div><h3>Live telemetry requires analyst access</h3><p>Grafana remains behind the authenticated AEGIS gateway and is never exposed directly.</p></div>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="ops-quick-grid" aria-label="Security operations shortcuts">
+      {% if aegis_enabled and not aegis_restricted %}<a class="ops-quick-action" href="{% url 'plugins:aegis_review:findings' %}"><span><i class="mdi mdi-shield-search-outline" aria-hidden="true"></i></span><div><strong>Investigate findings</strong><small>Review AI decisions and WAF evidence</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+      {% if perms.incidents.view_incident %}<a class="ops-quick-action" href="{% url 'incidents:incident_list' %}"><span><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span><div><strong>Incident response</strong><small>Coordinate impact and recovery</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+      {% if perms.components.view_component %}<a class="ops-quick-action" href="{% url 'components:component_list' %}"><span><i class="mdi mdi-server-network" aria-hidden="true"></i></span><div><strong>Service topology</strong><small>Inspect operational dependencies</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+      {% if perms.extras.view_objectchange %}<a class="ops-quick-action" href="{% url 'extras:objectchange_list' %}"><span><i class="mdi mdi-history" aria-hidden="true"></i></span><div><strong>Audit timeline</strong><small>Trace administrative changes</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+    </section>
   </div>
 {% endblock %}

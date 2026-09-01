@@ -146,9 +146,9 @@
       <div class="platform-page-header px-4 sm:px-6 lg:px-8">
         <div class="flex flex-row justify-between items-end">
           <div>
-            <p class="platform-eyebrow">AEGIS / SECURITY OPERATIONS</p>
+            <p class="platform-eyebrow">{% block eyebrow %}AEGIS / SECURITY OPERATIONS{% endblock %}</p>
             <h1>{% block title %}{% endblock %}</h1>
-            <p class="platform-page-subtitle">Monitor platform health, investigate activity, and coordinate operational response.</p>
+            <p class="platform-page-subtitle">{% block subtitle %}Monitor platform health, investigate activity, and coordinate operational response.{% endblock %}</p>
           </div>
           <div class="platform-page-controls">{% block controls %}{% endblock %}</div>
         </div>
