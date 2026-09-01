@@ -13,7 +13,7 @@ These rendered SVG diagrams are the primary visual architecture set used by the 
 | [`22-aegis-secure-cicd-gitops.svg`](22-aegis-secure-cicd-gitops.svg) | How does source become an immutable artifact and reach EKS without granting CI direct cluster deployment authority? |
 | [`23-aegis-resilience-observability.svg`](23-aegis-resilience-observability.svg) | How are workloads distributed and recovered across AZs, and how is the platform observed? |
 
-The SVGs intentionally use generic service cards rather than relying on vendor-icon artwork. This keeps the diagrams readable in GitHub, portable, diffable, and directly tied to the implemented architecture.
+The portfolio SVGs use the same clean AEGIS infographic language as the project's original architecture boards: a white presentation surface, navy/blue hierarchy, color-coded trust and service domains, rounded component cards, and explicit directional flows. They remain text-based SVGs so they stay sharp in GitHub and easy to review. The focused Mermaid sources below remain the engineering source of truth for detailed topology questions.
 
 ## Editable final sources
 
