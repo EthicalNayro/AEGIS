@@ -90,6 +90,13 @@ kubeStateMetrics:
 nodeExporter:
   enabled: true
 
+# Node exporter must run on every current node, including when a node reaches
+# its pod-density limit. Use Kubernetes' built-in cluster-critical priority so
+# node-level telemetry can preempt a lower-priority workload rather than leave
+# the observability DaemonSet permanently Progressing under scheduling pressure.
+prometheus-node-exporter:
+  priorityClassName: system-cluster-critical
+
 # Keep the observability AppProject confined to the monitoring namespace.
 # kube-prometheus-stack otherwise creates discovery Services in kube-system
 # for these components. We do not need those targets for the AEGIS project
