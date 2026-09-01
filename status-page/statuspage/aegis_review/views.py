@@ -32,7 +32,7 @@ OBSERVABILITY_DASHBOARDS = (
         "key": "platform",
         "label": "Platform Health",
         "description": "AEGIS services, nodes, restarts, CPU, and memory",
-        "icon": "mdi-shield-pulse-outline",
+        "icon": "mdi-shield-check-outline",
         "uid": "aegis-platform-health",
         "slug": "aegis-platform-health",
         "query": {

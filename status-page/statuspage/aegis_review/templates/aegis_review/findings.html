@@ -22,10 +22,10 @@
     </section>
   {% else %}
     <section class="aegis-kpi-grid" aria-label="Security finding metrics">
-      <article class="aegis-panel aegis-kpi"><span class="aegis-kpi-icon" aria-hidden="true">⇩</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Ingested findings</span><strong class="aegis-kpi-value">{{ total_count }}</strong><span class="aegis-kpi-note">Current review dataset</span></div></article>
-      <article class="aegis-panel aegis-kpi"><span class="aegis-kpi-icon" aria-hidden="true">◎</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Awaiting analyst</span><strong class="aegis-kpi-value">{{ pending_count }}</strong><span class="aegis-kpi-note">Require human decision</span></div></article>
-      <article class="aegis-panel aegis-kpi is-critical"><span class="aegis-kpi-icon" aria-hidden="true">!</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Critical exposure</span><strong class="aegis-kpi-value">{{ critical_count }}</strong><span class="aegis-kpi-note">Critical severity signals</span></div></article>
-      <article class="aegis-panel aegis-kpi is-high"><span class="aegis-kpi-icon" aria-hidden="true">↗</span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">High priority</span><strong class="aegis-kpi-value">{{ high_count }}</strong><span class="aegis-kpi-note">High severity signals</span></div></article>
+      <article class="aegis-panel aegis-kpi"><span class="aegis-kpi-icon"><i class="mdi mdi-tray-arrow-down" aria-hidden="true"></i></span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Ingested findings</span><strong class="aegis-kpi-value">{{ total_count }}</strong><span class="aegis-kpi-note">Current review dataset</span></div></article>
+      <article class="aegis-panel aegis-kpi"><span class="aegis-kpi-icon"><i class="mdi mdi-timer-sand" aria-hidden="true"></i></span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Awaiting analyst</span><strong class="aegis-kpi-value">{{ pending_count }}</strong><span class="aegis-kpi-note">Require human decision</span></div></article>
+      <article class="aegis-panel aegis-kpi is-critical"><span class="aegis-kpi-icon"><i class="mdi mdi-alert-octagon-outline" aria-hidden="true"></i></span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">Critical exposure</span><strong class="aegis-kpi-value">{{ critical_count }}</strong><span class="aegis-kpi-note">Critical severity signals</span></div></article>
+      <article class="aegis-panel aegis-kpi is-high"><span class="aegis-kpi-icon"><i class="mdi mdi-trending-up" aria-hidden="true"></i></span><div class="aegis-kpi-copy"><span class="aegis-kpi-label">High priority</span><strong class="aegis-kpi-value">{{ high_count }}</strong><span class="aegis-kpi-note">High severity signals</span></div></article>
     </section>
 
     <section id="queue" class="aegis-panel aegis-queue" aria-labelledby="queue-title">

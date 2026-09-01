@@ -52,14 +52,14 @@
     </header>
 
     <section class="aegis-summary-grid" aria-label="Incident intelligence summary">
-      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon" aria-hidden="true">◉</span><dl><dt>AI Classification</dt><dd style="color:var(--aegis-cyan)">{{ finding.classification }}</dd></dl></article>
-      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon" style="color:var(--aegis-red);background:rgba(127,29,29,.22)" aria-hidden="true">!</span><dl><dt>Severity</dt><dd><span class="aegis-badge {% if finding.severity == 'CRITICAL' %}aegis-critical{% elif finding.severity == 'HIGH' %}aegis-high{% elif finding.severity == 'MEDIUM' %}aegis-medium{% else %}aegis-low{% endif %}">{{ finding.severity }}</span></dd></dl></article>
-      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon" aria-hidden="true">↗</span><dl><dt>AI Confidence</dt><dd>{% if finding.confidence_percent is not None %}{{ finding.confidence_percent }}%{% else %}N/A{% endif %}</dd>{% if finding.confidence_percent is not None %}<div class="aegis-confidence-track" style="margin-top:.55rem"><div class="aegis-confidence-bar" style="--confidence:{{ finding.confidence_percent }}%"></div></div>{% endif %}</dl></article>
+      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon"><i class="mdi mdi-robot-outline" aria-hidden="true"></i></span><dl><dt>AI Classification</dt><dd class="is-ai">{{ finding.classification }}</dd></dl></article>
+      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon is-severity"><i class="mdi mdi-alert-octagon-outline" aria-hidden="true"></i></span><dl><dt>Severity</dt><dd><span class="aegis-badge {% if finding.severity == 'CRITICAL' %}aegis-critical{% elif finding.severity == 'HIGH' %}aegis-high{% elif finding.severity == 'MEDIUM' %}aegis-medium{% else %}aegis-low{% endif %}">{{ finding.severity }}</span></dd></dl></article>
+      <article class="aegis-panel aegis-summary-card"><span class="aegis-summary-icon"><i class="mdi mdi-gauge" aria-hidden="true"></i></span><dl><dt>AI Confidence</dt><dd>{% if finding.confidence_percent is not None %}{{ finding.confidence_percent }}%{% else %}N/A{% endif %}</dd>{% if finding.confidence_percent is not None %}<div class="aegis-confidence-track" style="margin-top:.55rem"><div class="aegis-confidence-bar" style="--confidence:{{ finding.confidence_percent }}%"></div></div>{% endif %}</dl></article>
     </section>
 
     <section class="aegis-analysis-grid">
       <article class="aegis-panel aegis-detail-card">
-        <header class="aegis-detail-head"><span aria-hidden="true">◉</span><h2>AI Assessment</h2></header>
+        <header class="aegis-detail-head"><i class="mdi mdi-robot-outline" aria-hidden="true"></i><h2>AI Assessment</h2></header>
         <dl class="aegis-detail-list">
           <div class="aegis-detail-row"><dt>Reasoning summary</dt><dd>{{ finding.reason }}</dd></div>
           <div class="aegis-detail-row"><dt>Recommended action</dt><dd>{{ finding.recommended_action }}</dd></div>
@@ -68,7 +68,7 @@
       </article>
 
       <article class="aegis-panel aegis-detail-card">
-        <header class="aegis-detail-head"><span aria-hidden="true">♢</span><h2>WAF Evidence</h2></header>
+        <header class="aegis-detail-head"><i class="mdi mdi-shield-search" aria-hidden="true"></i><h2>WAF Evidence</h2></header>
         <dl class="aegis-detail-list">
           <div class="aegis-detail-row"><dt>Action</dt><dd><span class="aegis-badge aegis-critical">{{ finding.waf_action }}</span></dd></div>
           <div class="aegis-detail-row"><dt>Matched rule</dt><dd><code>{{ finding.matched_rule }}</code></dd></div>
