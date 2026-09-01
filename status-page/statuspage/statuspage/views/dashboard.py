@@ -28,6 +28,7 @@ RADAR_SEVERITY_BANDS = {
     'HIGH': (22, 31),
     'MEDIUM': (36, 44),
 }
+RADAR_SCAN_SECONDS = 5.5
 
 
 def build_radar_points(findings, limit=12):
@@ -65,7 +66,10 @@ def build_radar_points(findings, limit=12):
             'severity': severity,
             'x': round(50 + math.cos(angle) * radius, 1),
             'y': round(50 + math.sin(angle) * radius, 1),
-            'delay': round(-(digest[3] / 255 * 4), 2),
+            'reveal_delay': round(
+                angle / math.tau * RADAR_SCAN_SECONDS,
+                2,
+            ),
         })
 
         if len(points) >= limit:

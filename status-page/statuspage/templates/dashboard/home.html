@@ -37,7 +37,7 @@
             <a
               class="ops-radar-point is-{{ point.severity|lower }}"
               href="{% url 'plugins:aegis_review:finding_detail' point.incident_id %}"
-              style="--point-x: {{ point.x }}%; --point-y: {{ point.y }}%; --point-delay: {{ point.delay }}s"
+              style="--point-x: {{ point.x }}%; --point-y: {{ point.y }}%; --reveal-delay: {{ point.reveal_delay }}s"
               aria-label="Open {{ point.severity|lower }} finding {{ point.incident_id }}"
               title="{{ point.incident_id }} · {{ point.severity }}"
             ><span class="sr-only">{{ point.incident_id }} · {{ point.severity }}</span></a>

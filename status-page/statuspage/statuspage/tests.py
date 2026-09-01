@@ -134,3 +134,7 @@ class AegisDashboardContextTests(SimpleTestCase):
         self.assertGreaterEqual(distances["HIGH"], 21.8)
         self.assertLessEqual(distances["HIGH"], 31.2)
         self.assertGreaterEqual(distances["MEDIUM"], 35.8)
+        self.assertTrue(all(
+            0 <= point["reveal_delay"] <= 5.5
+            for point in points
+        ))
