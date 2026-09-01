@@ -2,17 +2,17 @@
   <title id="title">AEGIS multi-AZ resilience and observability architecture</title>
   <desc id="desc">Amazon EKS workload distribution across two Availability Zones, disruption controls, managed PostgreSQL and Redis, Karpenter recovery, and complementary Prometheus Grafana and CloudWatch observability.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#07111e"/><stop offset="1" stop-color="#0b1422"/></linearGradient>
-    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#67e8f9"/></marker>
-    <marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#4ade80"/></marker>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f8fbff"/></linearGradient>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#1553e8"/></marker>
+    <marker id="g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0 0 L0 6 L9 3z" fill="#21863a"/></marker>
     <style>
-      .title{font:700 34px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.sub{font:400 17px Inter,Segoe UI,Arial,sans-serif;fill:#94a3b8}.section{font:700 12px Inter,Segoe UI,Arial,sans-serif;letter-spacing:1.5px;fill:#cbd5e1}.label{font:700 15.5px Inter,Segoe UI,Arial,sans-serif;fill:#f8fafc}.small{font:400 12.5px Inter,Segoe UI,Arial,sans-serif;fill:#94a3b8}.cluster{fill:#0b1727;stroke:#334155;stroke-width:2}.az{fill:#0b1c2c;stroke:#38bdf8;stroke-width:1.7}.box{fill:#111c2e;stroke:#334155;stroke-width:1.5}.green{fill:#10251c;stroke:#4ade80;stroke-width:1.5}.obs{fill:#0d2020;stroke:#2dd4bf;stroke-width:1.5}.data{fill:#151629;stroke:#a78bfa;stroke-width:1.5}.aws{fill:#24180b;stroke:#f59e0b;stroke-width:1.5}.line{stroke:#67e8f9;stroke-width:2.2;fill:none;marker-end:url(#a)}.good{stroke:#4ade80;stroke-width:2.2;fill:none;marker-end:url(#g)}.dash{stroke:#64748b;stroke-width:2;stroke-dasharray:7 7;fill:none}
+      .title{font:800 40px Inter,Segoe UI,Arial,sans-serif;fill:#0b1d4d}.sub{font:600 18px Inter,Segoe UI,Arial,sans-serif;fill:#1553e8}.section{font:800 12px Inter,Segoe UI,Arial,sans-serif;letter-spacing:1.5px;fill:#1553e8}.label{font:700 15.5px Inter,Segoe UI,Arial,sans-serif;fill:#14213d}.small{font:400 12.5px Inter,Segoe UI,Arial,sans-serif;fill:#53627a}.cluster{fill:#ffffff;stroke:#8db1ff;stroke-width:2}.az{fill:#f8fbff;stroke:#4383ef;stroke-width:1.7}.box{fill:#ffffff;stroke:#8db1ff;stroke-width:1.5}.green{fill:#f7fff9;stroke:#4ba45b;stroke-width:1.5}.obs{fill:#f4fffd;stroke:#2ca7a0;stroke-width:1.5}.data{fill:#faf8ff;stroke:#8b6fe8;stroke-width:1.5}.aws{fill:#fffaf2;stroke:#f59e0b;stroke-width:1.5}.line{stroke:#1553e8;stroke-width:2.2;fill:none;marker-end:url(#a)}.good{stroke:#21863a;stroke-width:2.2;fill:none;marker-end:url(#g)}.dash{stroke:#64748b;stroke-width:2;stroke-dasharray:7 7;fill:none}
     </style>
   </defs>
   <rect width="1600" height="860" fill="url(#bg)"/>
-  <circle cx="1450" cy="100" r="190" fill="#2dd4bf" opacity=".05"/><circle cx="120" cy="790" r="180" fill="#38bdf8" opacity=".04"/>
-  <text x="70" y="68" class="title">Multi-AZ Resilience &amp; Observability</text>
-  <text x="70" y="98" class="sub">AEGIS is designed to tolerate workload restarts, voluntary disruption and node pressure while keeping platform health observable.</text>
+  <circle cx="1450" cy="100" r="190" fill="#2ca7a0" opacity=".02"/><circle cx="120" cy="790" r="180" fill="#1553e8" opacity=".02"/>
+  <text x="800" y="62" text-anchor="middle" class="title">AEGIS – Resilience &amp; Observability</text>
+  <text x="800" y="96" text-anchor="middle" class="sub">04 – Multi-AZ Kubernetes Availability and Signals</text>
 
   <rect x="55" y="140" width="1010" height="565" rx="24" class="cluster"/>
   <text x="85" y="176" class="section">AMAZON EKS · PRIVATE WORKERS · TWO AVAILABILITY ZONES</text>
@@ -54,7 +54,7 @@
 
   <rect x="1145" y="555" width="365" height="96" rx="16" class="aws"/><text x="1327" y="586" text-anchor="middle" class="label">CloudWatch</text><text x="1327" y="610" text-anchor="middle" class="small">WAF · ALB · event pipeline · AI quality</text><text x="1327" y="631" text-anchor="middle" class="small">complements Prometheus/Grafana</text>
 
-  <rect x="55" y="744" width="1490" height="70" rx="18" fill="#0c1726" stroke="#334155"/>
+  <rect x="55" y="744" width="1490" height="70" rx="18" fill="#f8fbff" stroke="#8db1ff"/>
   <text x="85" y="774" class="section">VALIDATED RESILIENCE POSTURE</text>
   <text x="285" y="774" class="small">multiple Ready replicas across AZs · disruption budgets · readiness/liveness probes · Karpenter capacity recovery · protected node telemetry · managed database/cache failover</text>
   <text x="285" y="797" class="small">Boundaries remain explicit: no multi-region claim, no HA Argo CD claim, and no active Status-Page HPA claim.</text>
