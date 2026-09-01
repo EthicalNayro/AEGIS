@@ -1,296 +1,361 @@
 # Architecture Decisions
 
-This document records the major architectural decisions introduced during Phase 2. The goal is to preserve the reasoning behind the implementation, not only the resulting code.
+This document records the architectural decisions that define the **implemented final AEGIS showcase state**. Earlier Phase 1 / Phase 2 experiments are retained in source history and project-evolution documentation, but the statuses below describe what is actually deployed and validated now.
 
 ---
 
-## ADR-001 — Paginated CloudTrail ingestion
+## ADR-001 — Prefer at-least-once delivery with idempotent persistence
 
-**Status:** Accepted
+**Status:** Implemented
 
 ### Context
 
-A single CloudTrail `LookupEvents` response does not necessarily represent the complete requested time window. During development, relevant Security Group activity could be pushed outside the first result page by unrelated account activity.
+Security telemetry and queue delivery can be retried. Trying to guarantee exactly-once processing across distributed systems would add fragile coordination and could create monitoring gaps.
 
 ### Decision
 
-AEGIS follows CloudTrail `NextToken` pagination until the configured total event limit is reached or CloudTrail returns no additional page. Event-name filters are preserved across pages and collector-generated `LookupEvents` noise is removed.
+AEGIS accepts at-least-once delivery and makes replay safe:
+
+- deterministic incident identity;
+- conditional persistence;
+- SQS ACK only after successful finding persistence;
+- bounded retry with DLQ isolation.
 
 ### Consequences
 
-The ingestion layer no longer assumes that one API response is complete. The configured `max_results` value remains an intentional upper bound.
+Duplicate transport is expected and safe. Reliability is preferred over pretending the event path is exactly-once.
 
 ---
 
-## ADR-002 — At-least-once processing with idempotent persistence
+## ADR-002 — Fail closed at authorization and trust boundaries
 
-**Status:** Accepted
+**Status:** Implemented
 
 ### Context
 
-The worker deliberately uses overlapping CloudTrail time windows to reduce the risk of missing delayed or previously unavailable events. The same source event may therefore be processed multiple times.
-
-Exact-once polling semantics would add fragile state coordination and could create monitoring gaps.
+Security telemetry, AWS resource state, GitOps race conditions, and model output can all be incomplete, stale, malformed, or attacker-controlled.
 
 ### Decision
 
-AEGIS uses at-least-once processing. Incident IDs are deterministic and PostgreSQL enforces uniqueness with the incident primary key and `ON CONFLICT DO NOTHING`.
+AEGIS fails closed when a trust condition cannot be verified. Examples include:
+
+- unsupported or unresolved monitored resources are not silently treated as trusted;
+- stale CI workflows cannot overwrite newer GitOps state;
+- malformed Bedrock output is not persisted as a valid finding;
+- ExternalDNS refuses unexpected hostnames, record types, targets, and deletes.
 
 ### Consequences
 
-Replay is expected and safe. Reliability is preferred over attempting exact-once event delivery.
+Some ambiguous operations are rejected instead of guessed. This increases operational friction slightly but makes security behavior easier to reason about.
 
 ---
 
-## ADR-003 — Separate processing orchestration from runtime entry points
+## ADR-003 — Run application compute on private Amazon EKS workers
 
-**Status:** Accepted
+**Status:** Implemented and validated
 
 ### Context
 
-The initial manual prototype performed collection, normalization, detection, incident construction, persistence, and presentation inside one script.
+The original platform used standalone EC2 hosts managed with Ansible and systemd. That model couples deployment, restart behavior, placement, and scaling to individual servers.
 
 ### Decision
 
-Reusable event orchestration lives in `SecurityEventPipeline`. Runtime entry points construct dependencies and manage lifecycle, while individual components retain their own responsibilities.
+The final showcase uses Amazon EKS with:
+
+- a Managed Node Group baseline;
+- private worker nodes across two Availability Zones;
+- Karpenter for additional Spot / On-Demand capacity;
+- Kubernetes probes, requests/limits, PDBs, and topology spread;
+- `restricted` Pod Security Admission for `aegis-system`.
 
 ### Consequences
 
-Manual scripts, continuous workers, and future runtimes can reuse the same processing path. Transport, detection, and persistence implementations can evolve independently.
+Runtime behavior becomes declarative and scheduler-driven. Cluster lifecycle and Kubernetes security add complexity, but HA placement, restart tolerance, capacity recovery, and GitOps reconciliation become first-class platform capabilities.
 
 ---
 
-## ADR-004 — Persistent worker checkpoints with safety overlap
+## ADR-004 — Keep persistent databases outside Kubernetes
 
-**Status:** Accepted
+**Status:** Implemented and validated
 
 ### Context
 
-A long-running security worker can stop because of development shutdowns, failures, or future deployments. Process-memory state would be lost after restart.
+Moving application compute to Kubernetes does not require moving stateful databases into the cluster.
 
 ### Decision
 
-AEGIS stores the last successful polling checkpoint in PostgreSQL. On restart, the worker calculates the elapsed gap and adds the configured lookback as a safety overlap. The checkpoint is saved only after successful pipeline execution.
+AEGIS uses:
+
+- Amazon RDS PostgreSQL 16, Multi-AZ;
+- Amazon ElastiCache Redis, Multi-AZ with automatic failover;
+- DynamoDB for security findings.
 
 ### Consequences
 
-A restart does not silently create an unmonitored time gap. Failed cycles do not advance the high-water mark. Recovery replay is safe because incident persistence is idempotent.
+Kubernetes remains focused on application/security-processing workloads while AWS managed services own database/cache replication, backups, failover, and storage lifecycle. Persistent-data recovery is still subject to documented restore-testing gaps.
 
 ---
 
-## ADR-005 — Explicit opt-in resource scope with fail-closed enforcement
+## ADR-005 — Separate CI from Kubernetes deployment authority
 
-**Status:** Accepted
+**Status:** Implemented and validated
 
 ### Context
 
-CloudTrail can contain activity for resources and actors outside the intended AEGIS monitoring scope. Filtering by one hard-coded resource ID was useful for a lab but was not a scalable authorization boundary.
+Giving a build pipeline direct cluster mutation rights would make CI compromise equivalent to cluster compromise.
 
 ### Decision
 
-Scope enforcement happens before detection. The current EC2 Security Group policy requires:
+GitHub Actions is CI and artifact delivery, not the Kubernetes CD authority.
 
 ```text
-AEGISMonitoring=enabled
+GitHub Actions
+  -> validate / build / scan / SBOM
+  -> ECR immutable image
+  -> guarded Git desired-state update
+
+Argo CD
+  -> reconcile EKS
 ```
 
-Missing tags, unsupported resource types, missing identifiers, unresolved resources, and validation failures result in denial.
+The Status-Page GitHub OIDC role has ECR delivery permissions and no EKS deployment permission.
 
 ### Consequences
 
-AEGIS processes only resources that can be explicitly verified as in scope. New resource-specific policies can be added without embedding authorization rules inside detectors.
+Deployment requires a reviewed desired-state change. Argo owns reconciliation and self-heal. A stale CI run fails closed before it can overwrite newer GitOps state.
 
 ---
 
-## ADR-006 — Signal-oriented observability
+## ADR-006 — Deploy immutable application artifacts by digest
 
-**Status:** Accepted
+**Status:** Implemented and validated
 
 ### Context
 
-Overlapping polling and checkpoint reads can generate repetitive operational output during normal processing. At-least-once replay also means previously detected events may appear again as duplicates even though no new security incident has been created.
-
-During recovery, CloudTrail can reference resources that no longer exist. Treating expected historical conditions such as a deleted Security Group as warnings creates noise and makes genuine AWS validation failures harder to identify.
-
-Suppressing all normal-cycle output, however, would make the long-running worker appear stalled and would provide little visibility into whether each stage of the security pipeline is functioning.
+Mutable image tags make it difficult to prove that the artifact scanned in CI is the artifact running in Kubernetes.
 
 ### Decision
 
-AEGIS uses log levels based on operational significance and exposes pipeline execution telemetry.
+AEGIS uses immutable ECR delivery and writes the resolved `sha256` digest into `gitops/eks-dev/kustomization.yaml`.
 
-Each pipeline execution records:
+CI also generates a CycloneDX SBOM and applies a fail-closed Trivy CRITICAL vulnerability gate. Third-party GitHub Actions are pinned by commit SHA.
+
+### Consequences
+
+The running application can be compared directly with Git desired state. Rollback is an auditable Git change to a previously validated digest rather than a tag mutation.
+
+---
+
+## ADR-007 — Run database migrations as an Argo CD PreSync Job
+
+**Status:** Implemented and validated
+
+### Context
+
+Running Django migrations independently in every web Pod can create schema races during rollout.
+
+### Decision
+
+AEGIS runs migrations in a dedicated Kubernetes Job annotated as an Argo CD `PreSync` hook.
+
+### Consequences
+
+Schema mutation is separated from steady-state web startup and must succeed before the application revision is reconciled.
+
+---
+
+## ADR-008 — Use queue buffering and a DLQ for the security-event pipeline
+
+**Status:** Implemented and validated
+
+### Context
+
+WAF security signals can arrive while the analyzer is busy, restarting, or temporarily unable to call Bedrock/DynamoDB.
+
+### Decision
+
+The active event path is:
 
 ```text
-collected events
-→ normalized events
-→ in-scope events
-→ detections
-→ inserted incidents / duplicates
+WAF metric/alarm
+ -> EventBridge
+ -> SQS security-events
+ -> Analyzer
+ -> Bedrock
+ -> DynamoDB
 ```
 
-Operational logging follows these rules:
-
-- routine scope evaluation and checkpoint reads use `DEBUG`;
-- routine empty or duplicate-only polling cycles use `DEBUG`;
-- newly inserted security incidents produce an immediate `INFO` summary;
-- periodic health heartbeats use `INFO` and include pipeline telemetry;
-- meaningful worker recovery uses `INFO`;
-- historical resources that no longer exist, such as `InvalidGroup.NotFound`, remain fail-closed but are logged at `DEBUG`;
-- unexpected AWS validation failures, permission failures, and similar operational problems use `WARNING`;
-- polling-cycle failures use `ERROR`.
-
-Duplicate-only cycles are not treated as new security signals. They remain expected behavior under the at-least-once processing model.
+Repeated failures are isolated through a DLQ. Analyzer visibility is extended during processing and the SQS message is deleted only after persistence succeeds.
 
 ### Consequences
 
-Normal operation remains quiet while still providing periodic evidence that CloudTrail collection, normalization, scope enforcement, detection, and persistence are functioning.
+Producer and consumer availability are decoupled. Poison events do not disappear or retry forever in the main queue.
 
-Operators can distinguish between:
+---
+
+## ADR-009 — Treat AI as advisory, structured, and human-governed
+
+**Status:** Implemented and validated
+
+### Context
+
+Telemetry can contain attacker-controlled content and model output can be wrong or malformed.
+
+### Decision
+
+AEGIS:
+
+- treats telemetry as untrusted data;
+- separates analyzer instructions from telemetry;
+- requests structured Bedrock output;
+- validates parsed output before persistence;
+- never grants model output infrastructure mutation authority;
+- requires staff analyst review;
+- derives quality metrics from human-reviewed findings.
+
+### Consequences
+
+The AI layer improves triage without becoming an autonomous security principal. Human feedback is measured; reinforcement learning or automatic retraining is not claimed.
+
+---
+
+## ADR-010 — Use complementary observability planes
+
+**Status:** Implemented and validated
+
+### Context
+
+AWS edge/security signals and Kubernetes workload signals have different authoritative sources.
+
+### Decision
+
+AEGIS keeps two complementary planes:
+
+- **CloudWatch** for WAF, ALB, security-event pipeline, alarms, and AI-quality signals;
+- **Prometheus/Grafana** for Kubernetes, workload, Pod, node, and platform-health telemetry.
+
+The custom **AEGIS Platform Health** dashboard is provisioned from Git and reconciled through the dedicated observability Argo CD application.
+
+### Consequences
+
+The project does not force every signal into one backend. Each monitoring plane remains aligned with the layer it observes best.
+
+---
+
+## ADR-011 — Protect node-level telemetry under Pod-density pressure
+
+**Status:** Implemented after final-validation incident
+
+### Context
+
+During observability rollout, one node-exporter Pod remained Pending because its target node had reached the Kubernetes Pod-density limit. Prometheus and Grafana were otherwise healthy, but Argo correctly remained `Progressing` because the DaemonSet did not cover every current node.
+
+### Decision
+
+Node exporter is assigned:
+
+```yaml
+priorityClassName: system-cluster-critical
+```
+
+### Consequences
+
+Node-level telemetry can preempt lower-priority workload Pods when necessary instead of silently leaving a current node without exporter coverage. This was added as a resilience hardening based on observed scheduling pressure, not as a theoretical control.
+
+---
+
+## ADR-012 — Keep public DNS on Dynu and safety-bound ExternalDNS
+
+**Status:** Implemented in dry-run; active writes intentionally disabled
+
+### Context
+
+The project does not own a Route 53-managed domain and cannot honestly present Route 53 as the implemented DNS architecture.
+
+### Decision
+
+The public hostname remains:
 
 ```text
-no source activity
-vs
-out-of-scope activity
-vs
-in-scope activity with no detection
-vs
-duplicate replay
-vs
-a newly persisted security incident
+app.aegis-project.ddnsfree.com
 ```
 
-Expected recovery conditions do not hide genuine AWS or runtime failures behind excessive warning output.
+AEGIS integrates ExternalDNS with a custom Dynu webhook provider. The accepted state enforces:
 
-The same pipeline telemetry also provides a foundation for future metrics and monitoring integrations without coupling those systems directly to detection logic.
-
----
-
-## ADR-007 — Local development runtime keeps AWS credentials off EC2
-
-**Status:** Accepted for the current phase
-
-### Context
-
-Phase 2 needs AWS API access and private PostgreSQL access, but the current environment does not yet have the final production runtime identity design.
-
-### Decision
-
-The continuous worker currently runs from the developer environment using the configured AWS profile. PostgreSQL remains private and is reached through an SSH local port forward. AWS credentials are not copied to the application EC2 instance.
+- exact hostname filtering;
+- namespace-scoped Ingress read access;
+- CNAME-only handling;
+- `upsert-only` policy;
+- `.elb.amazonaws.com` target suffix validation;
+- no delete behavior;
+- API key supplied from a Kubernetes Secret;
+- `--dry-run` enabled.
 
 ### Consequences
 
-The current implementation is suitable for development and validation while preserving the private database boundary. Moving the worker to AWS requires a dedicated runtime identity and deployment design rather than copying local credentials to a host.
+The project demonstrates a real controller/provider integration without overstating DNS maturity or risking an accidental live mutation during final acceptance.
 
 ---
 
+## ADR-013 — Keep the original EC2/Ansible platform as historical evidence
 
-## ADR-008 — Migrate application compute from standalone EC2 to Amazon EKS
-
-**Status:** Accepted
+**Status:** Implemented documentation boundary
 
 ### Context
 
-The original Phase 1 platform deploys application workloads directly to an EC2 host and uses Ansible and systemd for runtime configuration.
-
-This architecture successfully established the initial platform but couples workload deployment and scaling to individual servers.
+The repository contains a meaningful earlier phase that demonstrates Terraform networking, private hosts, Ansible configuration, PostgreSQL/Redis setup, and Nginx/Gunicorn deployment.
 
 ### Decision
 
-AEGIS will migrate application compute to Amazon EKS.
-
-The first implementation will use EKS Managed Node Groups with worker nodes in private subnets across two Availability Zones.
-
-Django/Gunicorn, RQ workers, the scheduler, and the AEGIS security worker will become containerized Kubernetes workloads.
-
-The existing EC2 platform will remain available during the migration and will not be destroyed until the EKS replacement is validated.
+The EC2/Ansible material remains in the repository as **project-evolution evidence**, while `terraform/environments/eks-dev` and `gitops/eks-dev` represent the final showcase architecture.
 
 ### Consequences
 
-Application deployment becomes container-oriented rather than server-oriented.
-
-Kubernetes provides scheduling, workload replication, health management, resource governance, and horizontal scaling capabilities.
-
-The platform also gains additional operational complexity including cluster lifecycle, Kubernetes networking, container image management, workload identity, and Kubernetes security controls.
+Recruiters/reviewers can see architectural progression without confusing historical resources for the current production-style runtime. Historical documents and diagrams must be labeled accordingly.
 
 ---
 
-## ADR-009 — Use managed AWS services for persistent PostgreSQL and Redis
+## ADR-014 — Validate infrastructure code in CI; keep infrastructure apply operationally separate
 
-**Status:** Accepted with deployment prerequisite
-
-### Context
-
-The original platform operates PostgreSQL and Redis directly on private EC2 instances.
-
-Moving the application to Kubernetes does not imply that persistent databases should also move into the cluster.
-
-Operating databases inside Kubernetes would require additional responsibility for storage lifecycle, backup, failover, upgrades, and data durability.
-
-### Decision
-
-The target Phase 1.1 architecture uses Amazon RDS for PostgreSQL and Amazon ElastiCache for Redis.
-
-Persistent application data will remain outside the EKS cluster.
-
-### Consequences
-
-Database lifecycle and availability responsibilities move toward AWS managed services while the Kubernetes cluster remains focused on application and security-processing workloads.
-
-The current project identity does not presently have sufficient RDS or ElastiCache API permissions, so deployment of this decision requires an AWS permission change or pre-provisioned managed services.
-
-The existing EC2 database and Redis services remain in place until replacement services are available and migration is validated.
-
----
-
-## ADR-010 — Deploy Terraform through approval-gated GitHub Actions
-
-**Status:** Accepted
+**Status:** Implemented
 
 ### Context
 
-The original platform validates Terraform in GitHub Actions but executes Terraform plan/apply operationally from the developer environment.
-
-This creates a difference between code validation and the actual deployment control path.
-
-Long-lived AWS credentials stored in GitHub would also create unnecessary credential-management risk.
+An earlier design proposed approval-gated Terraform apply through GitHub Actions. That deployment control plane was not implemented and should not be implied by documentation.
 
 ### Decision
 
-The target delivery model uses GitHub Actions as the infrastructure deployment control plane.
+Terraform CI performs formatting, initialization without backend state, and validation for both:
 
-Pull requests perform validation, testing, security checks, and Terraform planning.
+```text
+terraform/environments/dev
+terraform/environments/eks-dev
+```
 
-Changes merged to `main` produce a deployment workflow that authenticates to AWS through GitHub OIDC.
-
-Terraform apply is protected by a GitHub Environment approval gate and deployment concurrency controls.
-
-Long-lived AWS access keys will not be stored as GitHub repository secrets.
+The workflow uses pinned third-party Actions. Infrastructure apply remains an explicit operational action outside the Status-Page application CI/CD path.
 
 ### Consequences
 
-Infrastructure deployment becomes repeatable, auditable, and tied directly to reviewed repository changes.
-
-Terraform state must move to a remote backend.
-
-GitHub OIDC and the AWS deployment roles become bootstrap dependencies.
-
-Because the current AWS identity cannot list IAM OIDC providers, IAM bootstrap may require an administrator or separately authorized identity.
+The repository accurately separates **Terraform validation** from **application delivery**. It does not claim a remote Terraform backend, GitHub Environment approval gate, or automated Terraform apply that has not been implemented.
 
 ---
 
 ## Decision Summary
 
-The Phase 2 architecture is intentionally built around these properties:
+The final platform is intentionally built around:
 
 ```text
-reliable ingestion
-+ explicit authorization scope
-+ reusable processing pipeline
-+ at-least-once delivery
-+ idempotent persistence
-+ restart recovery
-+ fail-closed behavior
-+ signal-oriented observability
+private multi-AZ compute
++ managed persistent data
++ least-privilege workload identity
++ immutable artifact delivery
++ Git as desired state
++ Argo-owned cluster reconciliation
++ queue buffering and idempotency
++ structured AI with human governance
++ complementary observability
++ explicit fail-closed boundaries
++ evidence-driven acceptance
 ```
 
-These decisions are the baseline for future detection, investigation, and response layers.
+These decisions define the accepted AEGIS showcase state. Future improvements such as NetworkPolicy enforcement, signed images, HA Argo CD, formal restore drills, production Status-Page HPA, and live Dynu mutation should be treated as new decisions rather than retroactively claimed as current capabilities.

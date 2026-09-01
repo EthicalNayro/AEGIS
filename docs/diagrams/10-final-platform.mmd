@@ -1,0 +1,35 @@
+flowchart TB
+    USER[Users / Analysts] --> DNS[Dynu DNS\napp.aegis-project.ddnsfree.com]
+    DNS --> ALB[Internet-facing ALB\nHTTPS :443]
+    ACM[ACM certificate] -. attached .-> ALB
+    WAF[AWS WAF Web ACL] -. associated .-> ALB
+    ALB --> ING[Kubernetes Ingress]
+
+    subgraph VPC[AEGIS VPC 10.10.0.0/16 · us-east-1 · 2 AZs]
+      subgraph EKS[Amazon EKS · private workers]
+        ING --> WEB[Status-Page web replicas]
+        WEB --> REVIEW[AEGIS Human Review plugin]
+        RQ[RQ workers]
+        SCHED[RQ scheduler\nsingleton]
+        ANALYZER[AEGIS Analyzer]
+        OBS[Prometheus + Grafana]
+        ARGO[Argo CD]
+        EXTDNS[ExternalDNS + Dynu webhook\n--dry-run]
+      end
+
+      WEB --> RDS[(RDS PostgreSQL\nMulti-AZ)]
+      WEB --> REDIS[(ElastiCache Redis\nMulti-AZ / TLS)]
+    end
+
+    ANALYZER --> BEDROCK[Amazon Bedrock\nNova Pro]
+    ANALYZER --> DDB[(DynamoDB findings\nPITR)]
+    REVIEW --> DDB
+
+    CW[CloudWatch\nWAF / ALB / alarms / AI quality] --> ANALYZER
+
+    GH[GitHub Actions\nOIDC CI] --> ECR[Immutable ECR image]
+    GH --> GIT[Git desired state]
+    GIT --> ARGO
+    ECR -. image pull .-> WEB
+
+    EXTDNS -. exact CNAME discovery\nnon-mutating .-> DNS

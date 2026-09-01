@@ -1,0 +1,44 @@
+flowchart TB
+    ALB[ALB / Ingress] --> SVC[Status-Page Service :8080]
+
+    subgraph EKS[Amazon EKS · private workers]
+      subgraph AZA[Availability Zone A]
+        N1[Worker node A]
+        W1[Status-Page web replica A]
+        NE1[node-exporter]
+        N1 --> W1
+        N1 --> NE1
+      end
+
+      subgraph AZB[Availability Zone B]
+        N2[Worker node B]
+        W2[Status-Page web replica B]
+        NE2[node-exporter]
+        N2 --> W2
+        N2 --> NE2
+      end
+
+      SVC --> W1
+      SVC --> W2
+
+      PDB[Pod Disruption Budget] -. protects voluntary disruption .-> W1
+      PDB -. protects voluntary disruption .-> W2
+      SPREAD[Revision-aware topology spread\nmatchLabelKeys: pod-template-hash] -. placement .-> W1
+      SPREAD -. placement .-> W2
+
+      RQ[RQ workers · 2 replicas]
+      RQPDB[RQ worker PDB] -. protects .-> RQ
+      SCHED[RQ scheduler\nsingleton + Recreate]
+
+      KARP[Karpenter NodePool\nSpot + On-Demand] --> N3[Additional Karpenter node\nwhen capacity is required]
+      N3 -. new scheduling capacity .-> RQ
+
+      PRIORITY[node-exporter\npriorityClassName:\nsystem-cluster-critical]
+      PRIORITY -. protects node telemetry\nunder Pod-density pressure .-> NE1
+      PRIORITY -. protects node telemetry\nunder Pod-density pressure .-> NE2
+    end
+
+    W1 --> RDS[(RDS PostgreSQL\nMulti-AZ)]
+    W2 --> RDS
+    W1 --> REDIS[(ElastiCache Redis\nMulti-AZ / failover)]
+    W2 --> REDIS

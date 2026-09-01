@@ -1,0 +1,35 @@
+flowchart TB
+    subgraph K8S[Kubernetes / workload observability]
+      KSM[kube-state-metrics]
+      NODE[node-exporter\nsystem-cluster-critical]
+      WORK[AEGIS Pods / workloads]
+      PROM[Prometheus]
+      GRAF[Grafana]
+      DASH[AEGIS Platform Health]
+
+      KSM --> PROM
+      NODE --> PROM
+      WORK --> PROM
+      PROM --> GRAF
+      GRAF --> DASH
+    end
+
+    subgraph AWS[AWS edge / security observability]
+      WAF[AWS WAF metrics + BLOCK logs]
+      ALB[ALB metrics]
+      PIPE[Security-event pipeline alarms]
+      AI[AEGIS/AIQuality]
+      CW[CloudWatch dashboards / alarms]
+
+      WAF --> CW
+      ALB --> CW
+      PIPE --> CW
+      AI --> CW
+    end
+
+    ARGO[Argo CD application health] --> OPS[Operator / analyst]
+    DASH --> OPS
+    CW --> OPS
+
+    NOTE[Prometheus/Grafana and CloudWatch are complementary.\nArgo health is a separate GitOps control-plane signal.]
+    NOTE -. model .-> OPS

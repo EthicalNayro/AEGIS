@@ -1,0 +1,24 @@
+flowchart LR
+    REQ[Internet request] --> ALB[ALB\nAWS WAF associated]
+    ALB -->|allowed| APP[Status-Page on EKS]
+
+    ALB -->|BlockedRequests metric| CW[CloudWatch Alarm]
+    CW --> EB[EventBridge]
+    EB --> SQS[SQS security-events]
+    SQS -. maxReceiveCount exceeded .-> DLQ[Dead-letter queue]
+
+    SQS --> ANALYZER[AEGIS Analyzer Pod\nPod Identity]
+    ANALYZER --> ENRICH[WAF event enrichment]
+    ENRICH --> BEDROCK[Amazon Bedrock\nNova Pro]
+    BEDROCK --> VALIDATE[JSON parse +\nschema / semantic validation]
+    VALIDATE --> DDB[(DynamoDB findings\nconditional PutItem)]
+
+    DDB --> REVIEW[Staff analyst review]
+    REVIEW --> VERDICT[CORRECT / INCORRECT\nconditional update]
+    VERDICT --> QUALITY[AEGIS/AIQuality\nCloudWatch metrics]
+
+    DDB -. persistence succeeds .-> ACK[SQS ACK / delete]
+    ACK -. completes .-> SQS
+
+    UNTRUSTED[Telemetry and model output\nare untrusted data]
+    UNTRUSTED -. trust boundary .-> ANALYZER

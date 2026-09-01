@@ -1,275 +1,388 @@
 # Architecture Safety Enhancements
 
-This document records the failure modes AEGIS was explicitly designed to tolerate or fail safely around. These controls are important because the project is not only a collection of AWS services; it is an attempt to make the interactions between those services predictable under retries, restarts, stale workflows, malformed AI output, and infrastructure drift.
+This document records the failure modes AEGIS is explicitly designed to tolerate or fail safely around. The project is not only a collection of AWS/Kubernetes services; the important engineering work is in making their interactions predictable under retries, restarts, scheduling pressure, stale workflows, malformed AI output, drift, and unsafe automation boundaries.
 
 ---
 
-## Security Event Reliability
+## 1. Security Event Reliability
 
 ### SQS buffering
 
-**Risk:** a burst of WAF security events arrives faster than the analyzer can process them.
+**Risk:** WAF security signals arrive faster than the analyzer can process them or the analyzer is temporarily unavailable.
 
-**Control:** EventBridge delivers to SQS rather than invoking the analyzer synchronously. Producers and consumers are decoupled and events remain durable while the analyzer catches up.
+**Control:** EventBridge delivers to SQS rather than coupling detection directly to analysis. Producers and consumers can fail or scale independently.
 
 ### Dead-letter queue
 
-**Risk:** a malformed or repeatedly failing event is retried forever and blocks useful work.
+**Risk:** one malformed or repeatedly failing event retries forever.
 
-**Control:** the main security queue has a DLQ and bounded redrive count. Poison events are isolated for investigation instead of disappearing or retrying indefinitely.
+**Control:** the main queue has a bounded redrive policy and a DLQ. Poison events are isolated for investigation instead of blocking normal processing.
 
-### ACK after successful persistence
+### Per-message visibility extension
 
-**Risk:** an event is deleted from the queue before its finding is durable.
+**Risk:** a Bedrock/DynamoDB analysis takes longer than the queue's default visibility timeout and the same message is processed concurrently.
 
-**Control:** the analyzer deletes/acknowledges the SQS message only after successful finding persistence.
+**Control:** the analyzer uses a longer per-message visibility window while processing.
 
-### Idempotent finding creation
+### ACK only after durable persistence
+
+**Risk:** a message is deleted before its finding is safely stored.
+
+**Control:** SQS delete/ACK happens only after the DynamoDB finding write succeeds.
+
+### Idempotent persistence
 
 **Risk:** retries create duplicate findings.
 
-**Control:** DynamoDB uses a deterministic incident identity and conditional `PutItem`. A replay is safe because an already-persisted incident cannot be silently duplicated.
+**Control:** deterministic incident identity plus conditional `PutItem` makes replay safe.
 
-### DynamoDB PITR
+### DynamoDB point-in-time recovery
 
-**Risk:** accidental or faulty updates damage finding history.
+**Risk:** accidental/faulty updates damage security finding history.
 
-**Control:** point-in-time recovery is enabled on the findings table.
+**Control:** PITR is enabled for the findings table.
 
 ---
 
-## AI Safety
+## 2. AI Safety and Human Governance
 
 ### Untrusted telemetry boundary
 
-**Risk:** attacker-controlled WAF telemetry contains prompt-like content intended to manipulate the model.
+**Risk:** attacker-controlled WAF telemetry contains prompt-like instructions.
 
-**Control:** telemetry is treated as data, separated from analyzer instructions, and never granted authority to redefine system behavior.
+**Control:** telemetry is treated as data, separated from analyzer instructions, and never allowed to redefine the task.
 
 ### Structured output validation
 
-**Risk:** the model returns malformed, incomplete, or unexpected output.
+**Risk:** Bedrock returns malformed, incomplete, or semantically unexpected output.
 
-**Control:** Bedrock output must parse as the expected structured JSON and pass application validation before persistence.
+**Control:** output must parse as the expected JSON structure and pass application validation before persistence.
 
-### Human governance
+### Advisory AI only
 
-**Risk:** a model classification is treated as fact and triggers unsafe automation.
+**Risk:** a model classification is treated as authoritative and automatically mutates infrastructure.
 
-**Control:** findings are reviewable and remain advisory. Analysts mark them `CORRECT` or `INCORRECT`; AEGIS does not autonomously remediate infrastructure.
+**Control:** AEGIS stores a reviewable finding. The model has no remediation authority.
 
-### Conditional review updates
+### Conditional human review
 
-**Risk:** two reviewers or duplicate requests overwrite an already-reviewed finding.
+**Risk:** two reviewers or duplicate requests silently overwrite a completed review.
 
-**Control:** review writes are conditional on the item remaining in `PENDING_REVIEW` state.
+**Control:** verdict updates are conditional on the item still being `PENDING_REVIEW`.
 
-### Measured feedback, not fake RL
+### Measured feedback, not fake reinforcement learning
 
-**Risk:** presenting a handful of verdicts as a trained reinforcement-learning system overstates capability.
+**Risk:** a small number of analyst verdicts is presented as model retraining or RL.
 
-**Control:** AEGIS computes human-verified quality metrics and labels small samples `EARLY_SAMPLE`. No automatic retraining is claimed.
+**Control:** reviewed findings feed quality metrics; small samples are labeled `EARLY_SAMPLE`. Automatic retraining is not claimed.
 
 ---
 
-## Identity and Secret Safety
+## 3. Identity and Secret Safety
 
-### Per-workload Pod Identity
+### Per-workload EKS Pod Identity
 
-**Risk:** one compromised Pod can reuse a broad node or shared AWS identity.
+**Risk:** a compromised Pod inherits broad node/shared AWS permissions.
 
-**Control:** AWS permissions are attached to dedicated Kubernetes service accounts through EKS Pod Identity and scoped to expected namespace/service-account identities.
+**Control:** AWS access is attached to dedicated Kubernetes service accounts through EKS Pod Identity.
+
+### Analyzer least privilege
+
+**Risk:** the analyzer identity can access unrelated AWS resources.
+
+**Control:** its role is scoped to the security queue, Bedrock analysis, finding persistence, and required telemetry/enrichment permissions.
+
+### Status-Page least privilege
+
+**Risk:** the web application can consume SQS events or call Bedrock directly.
+
+**Control:** the runtime/reviewer role is limited to the exact managed RDS secret and required DynamoDB review operations; SQS/Bedrock access is denied.
 
 ### CI without long-lived AWS keys
 
-**Risk:** static GitHub AWS credentials leak or remain valid indefinitely.
+**Risk:** static AWS credentials leak from GitHub.
 
-**Control:** GitHub Actions obtains temporary AWS credentials through OIDC with branch-scoped trust.
+**Control:** GitHub Actions obtains short-lived AWS credentials through OIDC and branch-scoped trust.
 
 ### CI has no EKS deployment rights
 
-**Risk:** compromise of the build pipeline immediately becomes cluster compromise.
+**Risk:** CI compromise immediately becomes cluster compromise.
 
-**Control:** the Status-Page CI role is limited to ECR delivery and required AWS checks. Continuous delivery is delegated to Argo CD.
+**Control:** Status-Page CI can deliver to ECR but cannot deploy to EKS. Argo CD owns Kubernetes mutation.
 
-### Managed runtime secrets
+### Runtime secrets outside Git
 
-**Risk:** database credentials or Django secret material are committed into a public repository or baked into images.
+**Risk:** database credentials, Django secrets, or Dynu credentials enter the public repository or image.
 
-**Control:** RDS credentials remain in Secrets Manager, the Django secret is provided outside Git, and runtime configuration is rendered into a memory-backed volume.
+**Control:** RDS credentials remain in Secrets Manager; Django and Dynu credentials are provided through Kubernetes Secrets outside Git; final runtime configuration is rendered into a memory-backed volume.
 
-### Ansible log suppression
+### Secret-safe automation output
 
-**Risk:** password variables appear in automation output.
+**Risk:** Ansible password variables appear in logs.
 
-**Control:** PostgreSQL user-creation tasks that handle passwords use `no_log: true`.
+**Control:** password-handling database tasks use `no_log: true`.
 
 ---
 
-## Kubernetes Runtime Safety
+## 4. Kubernetes Runtime Safety
 
 ### Restricted privileges
 
 **Risk:** application compromise gains unnecessary Linux/container privileges.
 
-**Control:** workloads use non-root identities, dropped capabilities, no privilege escalation, `RuntimeDefault` seccomp, and read-only root filesystems where practical. Namespace Pod Security Admission is set to `restricted`.
+**Control:** non-root identities, dropped capabilities, `allowPrivilegeEscalation: false`, `RuntimeDefault` seccomp, read-only root filesystems where practical, and Pod Security Admission `restricted`.
 
-### Readiness and liveness semantics
+### Health probes
 
-**Risk:** a process exists but cannot serve real application traffic.
+**Risk:** Kubernetes keeps routing traffic to a process that exists but cannot serve real application requests.
 
-**Control:** readiness checks exercise the Nginx-to-Django request path, while liveness checks confirm the Nginx listener remains alive.
+**Control:** readiness exercises the Nginx-to-Django path while liveness verifies the serving process/listener remains alive.
 
 ### Multiple replicas and PDB
 
-**Risk:** a single Pod restart or voluntary disruption removes the application.
+**Risk:** one Pod restart or voluntary disruption removes the application.
 
-**Control:** the web tier runs multiple replicas and has a Pod Disruption Budget.
+**Control:** multiple web replicas plus a Pod Disruption Budget.
 
 ### Revision-aware topology spread
 
-**Risk:** a rolling deployment appears balanced only because old revision Pods are still present in another Availability Zone.
+**Risk:** a rolling deployment appears balanced only because an old revision exists in another Availability Zone.
 
-**Control:** topology spread uses `matchLabelKeys: pod-template-hash`, so placement decisions apply to the current rollout revision.
+**Control:** topology spread uses `matchLabelKeys: pod-template-hash`, so the current rollout must independently satisfy placement.
 
 ### Singleton scheduler
 
-**Risk:** rolling updates temporarily run two RQ schedulers, causing duplicate scheduled work.
+**Risk:** rolling updates temporarily run two RQ schedulers and duplicate scheduled work.
 
-**Control:** the scheduler is a singleton and uses `Recreate` strategy.
+**Control:** one scheduler replica with `Recreate` strategy.
 
-### Dedicated migrations
+### Dedicated migration Job
 
-**Risk:** every web replica races to mutate the database schema during startup.
+**Risk:** every web replica races to alter the database schema at startup.
 
-**Control:** migrations run in a dedicated Argo CD `PreSync` Job before workload rollout.
+**Control:** migrations run once as an Argo CD `PreSync` Job before rollout.
+
+### Node telemetry priority under Pod-density pressure
+
+**Observed failure:** during final observability validation, node-exporter for one current node stayed Pending because the node had reached its Pod limit. Argo correctly remained `Progressing` while telemetry coverage was incomplete.
+
+**Control:** node-exporter is assigned:
+
+```yaml
+prometheus-node-exporter:
+  priorityClassName: system-cluster-critical
+```
+
+**Result:** node-level observability retains scheduling priority under Pod pressure instead of silently leaving a node unmonitored. After reconciliation, observability returned to `Synced / Healthy` and the final acceptance gate passed.
 
 ---
 
-## Data-Service Safety
+## 5. Data-Service Safety
 
-### Managed PostgreSQL Multi-AZ
+### RDS PostgreSQL Multi-AZ
 
-**Risk:** a single database host failure causes extended outage.
+**Risk:** a single database host failure creates an extended application outage.
 
-**Control:** RDS PostgreSQL uses Multi-AZ, backups, encrypted storage, and deletion protection.
+**Control:** Multi-AZ RDS, encrypted storage, automated backups, deletion protection, and managed credentials.
 
 ### Redis replication and failover
 
-**Risk:** a single Redis node failure breaks queues/cache state.
+**Risk:** a single Redis node failure breaks queue/cache operation.
 
-**Control:** ElastiCache Redis uses two nodes, Multi-AZ placement, automatic failover, encryption at rest, TLS in transit, and snapshots.
+**Control:** two-node ElastiCache deployment, Multi-AZ placement, automatic failover, encryption at rest, TLS in transit, and snapshots.
 
-### Persistent data outside Kubernetes
+### Persistent state outside Kubernetes
 
-**Risk:** application Pod/node lifecycle becomes coupled to database/cache durability.
+**Risk:** Pod/node lifecycle becomes coupled to database/cache durability.
 
 **Control:** PostgreSQL and Redis are managed AWS services outside the cluster.
 
 ---
 
-## Software Supply-Chain Safety
+## 6. Software Supply-Chain Safety
 
-### Pinned upstream and base image
+### Pinned source and runtime base
 
-**Risk:** rebuilds silently consume changed upstream source or a newly-mutated base tag.
+**Risk:** rebuilds silently consume changed upstream source or a mutated base tag.
 
-**Control:** Status-Page source and the Python base image are pinned to exact revisions/digests.
+**Control:** Status-Page source and the Python production base image are pinned to exact revisions/digests.
 
-### Multi-stage build
+### Multi-stage image
 
-**Risk:** compilers and development headers increase runtime attack surface.
+**Risk:** compilers/build headers increase the runtime attack surface.
 
-**Control:** build dependencies remain in a builder stage; the final runtime stage contains only required runtime packages and the built virtual environment.
+**Control:** build tooling stays in the builder stage; the final image contains runtime dependencies only.
 
 ### Pinned GitHub Actions
 
-**Risk:** a mutable Action tag changes underneath the pipeline.
+**Risk:** a mutable Action tag changes underneath CI.
 
-**Control:** third-party Actions are pinned by commit SHA.
+**Control:** all active third-party Actions are pinned by commit SHA. Terraform CI also validates both `dev` and `eks-dev`.
 
 ### Immutable ECR artifacts
 
-**Risk:** an image tag is overwritten after validation.
+**Risk:** a validated tag is overwritten later.
 
-**Control:** ECR tags are immutable and Kubernetes deploys by digest.
+**Control:** immutable ECR tags plus Kubernetes deployment by digest.
 
 ### Trivy fail-closed gate
 
-**Risk:** a known fixable CRITICAL vulnerability reaches production because scanning is informational only.
+**Risk:** vulnerability scanning is informational only and a fixable CRITICAL issue reaches the release path.
 
-**Control:** the workflow fails before publication when the configured CRITICAL gate is violated.
+**Control:** configured fixable CRITICAL findings fail delivery.
 
 ### CycloneDX SBOM
 
-**Risk:** the exact dependency composition of a released image cannot be reconstructed later.
+**Risk:** the released image's dependency composition cannot be reconstructed.
 
-**Control:** CI generates and retains a CycloneDX SBOM for the release image.
-
----
-
-## GitOps and Drift Safety
-
-### Argo self-heal
-
-**Risk:** manual cluster changes silently become the new production state.
-
-**Control:** Argo CD reconciles drift back to declared Git state.
-
-### AppProject boundaries
-
-**Risk:** an application definition gains unrestricted access to arbitrary cluster resources or destinations.
-
-**Control:** source repositories, destinations, and allowed resource kinds are constrained by an Argo CD AppProject.
+**Control:** CI generates and retains a CycloneDX SBOM for the release artifact.
 
 ### Safe stale-workflow rejection
 
-**Risk:** a slow/retried CI job overwrites desired state for newer application code.
+**Risk:** a slow/retried CI run overwrites desired state for newer source.
 
-**Control:** before editing GitOps state, CI fetches the remote branch and inspects newer commits. Newer non-GitOps source changes cause a fail-closed stop.
+**Control:** before editing GitOps state, CI fetches the remote branch and checks newer commits. Newer non-GitOps source causes a fail-closed stop.
 
-This control was proven by a real failed delivery: an older UI workflow refused to update GitOps after a newer security-tooling commit advanced the branch. A new workflow at current HEAD then succeeded.
+This behavior was validated by a real stale workflow rejection.
 
 ### Idempotent CI reruns
 
-**Risk:** retrying a workflow creates conflicting images or fails because immutable artifacts already exist.
+**Risk:** retrying CI conflicts with immutable image tags or creates a second artifact for the same commit.
 
-**Control:** CI checks for the exact commit-tagged image. When it exists, the workflow reuses that artifact and still regenerates security evidence and desired-state output.
-
-### Single authoritative production desired state
-
-**Risk:** multiple copies of production manifests drift independently.
-
-**Control:** `gitops/eks-dev/` is authoritative for the Status-Page production workload; duplicate legacy production manifests were retired.
+**Control:** CI detects/reuses the exact existing commit image and still regenerates security evidence/desired-state output.
 
 ---
 
-## Repository Safety
+## 7. GitOps and Drift Safety
 
-### Source-of-truth audit
+### Argo self-heal
 
-Terraform, Kubernetes/GitOps, analyzer code, human-review scripts, and Status-Page UI changes were audited for local-only/untracked source and committed before feature freeze.
+**Risk:** manual cluster changes silently become production truth.
+
+**Control:** Argo CD reconciles live drift back to Git desired state.
+
+### AppProject boundaries
+
+**Risk:** an application gains unrestricted sources, destinations, or cluster resource access.
+
+**Control:** Argo AppProjects constrain source repositories, destinations, and allowed resource kinds.
+
+### Single authoritative desired state
+
+**Risk:** duplicate production manifests drift independently.
+
+**Control:** `gitops/eks-dev/` is authoritative; duplicate legacy production manifests were retired.
+
+### Immutable runtime verification
+
+**Risk:** Git points to one image while Kubernetes runs another.
+
+**Control:** final acceptance compares the GitOps digest against Gunicorn and both application init-container images in EKS.
+
+---
+
+## 8. Observability Safety
+
+### Complementary monitoring planes
+
+**Risk:** forcing every signal into one tool creates blind spots or misleading ownership.
+
+**Control:** Prometheus/Grafana cover Kubernetes/workload/node telemetry; CloudWatch covers WAF, ALB, AWS alarms, event-pipeline, and AI-quality signals. Argo health remains a separate GitOps control-plane signal.
+
+### Git-managed dashboard
+
+**Risk:** important dashboards exist only as manual Grafana configuration.
+
+**Control:** the AEGIS Platform Health dashboard is stored in Git and reconciled by Argo CD.
+
+### Grafana exposure boundary
+
+**Risk:** direct public Grafana access bypasses application authorization.
+
+**Control:** Grafana remains `ClusterIP`-only, anonymous access is disabled, and the AEGIS application enforces staff authorization before issuing a viewer-only identity.
+
+---
+
+## 9. ExternalDNS / Dynu Safety
+
+### Dry-run final boundary
+
+**Risk:** a final-project DNS controller accidentally changes the public record during validation.
+
+**Control:** ExternalDNS final acceptance requires `--dry-run` to remain enabled.
+
+### Exact resource scope
+
+**Risk:** ExternalDNS discovers/manages unrelated ingresses or domains.
+
+**Control:** namespace-scoped controller, exact Ingress label, exact hostname filter, and CNAME-only managed record type.
+
+### Least-privilege Kubernetes RBAC
+
+**Risk:** DNS automation can read application Secrets or delete Ingress resources.
+
+**Control:** final acceptance proves intended Ingress read permission while Secret listing and Ingress deletion are denied.
+
+### Webhook fail-closed validation
+
+**Risk:** a malformed/unexpected ExternalDNS request targets arbitrary DNS names/services.
+
+**Control:** the Dynu webhook refuses:
+
+- any hostname other than `app.aegis-project.ddnsfree.com`;
+- non-CNAME records;
+- targets outside `.elb.amazonaws.com`;
+- invalid TTL boundaries;
+- delete requests;
+- ambiguous multiple existing managed CNAMEs.
+
+### Credential isolation
+
+**Risk:** the Dynu API key leaks into Git/logs or the webhook obtains unnecessary cluster identity.
+
+**Control:** the key comes from a Kubernetes Secret, is never logged, and the webhook sidecar does not receive the Kubernetes service-account token. Only the ExternalDNS container receives a manually projected API token.
+
+---
+
+## 10. Repository and Acceptance Safety
 
 ### Local artifact exclusion
 
-The repository ignores Terraform state/plans, local variable files, editor swaps/backups, environment files, keys, virtual environments, Python caches, and other local artifacts.
+The repository excludes Terraform state/plans, local variable files, editor files, environment files, keys, virtual environments, Python caches, and identified local static-generation scratch artifacts.
 
-### Final secret scan
+### Historical/current architecture separation
 
-Tracked files were scanned for obvious AWS access keys, private keys, and likely hardcoded password literals. Ansible Jinja password-variable references were intentionally distinguished from plaintext password values.
+**Risk:** Phase 1 EC2 documents/diagrams are mistaken for the final architecture.
+
+**Control:** final documentation explicitly labels the old EC2/Ansible material as historical and provides a dedicated final EKS diagram set.
+
+### Reproducible final acceptance gate
+
+**Risk:** the project is declared "done" based on screenshots or memory rather than a current runtime check.
+
+**Control:** `scripts/final-acceptance.sh` fails closed unless repository, Terraform, GitOps render, Argo health, rollouts, DNS safety, RBAC, digest consistency, multi-AZ placement, and public HTTPS health all pass.
+
+Accepted result:
+
+```text
+AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)
+```
 
 ---
 
 ## Remaining Hardening Opportunities
 
-The following are useful future improvements but are not required to support the validated final claims:
+These would improve production maturity but are **not required for the validated final claims**:
 
 - sign/attest container images and verify signatures before deployment;
-- add dedicated secret-scanning tooling such as Gitleaks to CI;
+- add dedicated secret scanning such as Gitleaks to CI;
 - pin the Nginx sidecar by digest;
-- activate and validate Kubernetes NetworkPolicy enforcement after confirming the VPC CNI policy mode;
+- activate and validate Kubernetes NetworkPolicy after confirming VPC CNI policy enforcement;
 - split Status-Page runtime and reviewer AWS identities;
-- harden Argo CD administrative access further and consider HA Argo on a larger cluster;
-- perform formal backup-restore exercises;
-- expand application autoscaling and load testing;
-- expand human-reviewed sample size before drawing conclusions about AI quality.
+- harden Argo CD administration and consider HA Argo on a larger cluster;
+- perform formal RDS/DynamoDB/Redis restore exercises and define measured RTO/RPO;
+- enable/validate Status-Page web HPA under production-style load;
+- expand the human-reviewed AI sample before making stronger quality claims;
+- move ExternalDNS from dry-run to live writes only after an explicit DNS cutover decision and rollback plan;
+- enable branch protection and require CI on `main`;
+- sign final release/tag or add artifact attestation.

@@ -1,0 +1,43 @@
+flowchart LR
+    subgraph GITHUB[GitHub]
+      CI[Status-Page CI]
+    end
+
+    CI -->|OIDC token| STS[AWS STS]
+    STS --> CIROLE[GitHub CI IAM role\nECR delivery only]
+    CIROLE --> ECR[Amazon ECR]
+    CIROLE -. no EKS permission .-> DENY1[EKS deployment denied]
+
+    subgraph EKS[Amazon EKS]
+      SAWEB[ServiceAccount\naegis-status-page]
+      SAAN[ServiceAccount\naegis-security-analyzer]
+      SAEXT[ServiceAccount\naegis-external-dns]
+      ARGO[Argo CD]
+      WORKLOADS[GitOps-managed workloads]
+    end
+
+    SAWEB -->|EKS Pod Identity| WEBROLE[Status-Page runtime/reviewer IAM role]
+    WEBROLE --> RDSSEC[Exact RDS managed secret]
+    WEBROLE --> DDB[(DynamoDB findings\nread/review update)]
+    WEBROLE -. denied .-> SQSX[SQS]
+    WEBROLE -. denied .-> BEDX[Bedrock]
+
+    SAAN -->|EKS Pod Identity| ANROLE[Analyzer IAM role]
+    ANROLE --> SQS[SQS security-events]
+    ANROLE --> BED[Amazon Bedrock]
+    ANROLE --> DDB2[(DynamoDB findings)]
+
+    SAEXT --> RBAC[Kubernetes namespace RBAC]
+    RBAC --> ING[Read intended Ingress]
+    RBAC -. denied .-> SECRETS[Kubernetes Secret list]
+    RBAC -. denied .-> DELETE[Ingress delete]
+
+    DYNU[Dynu webhook sidecar]
+    SECRET[Secret: aegis-dynu-api] --> DYNU
+    SAEXT -. projected API token only for\nexternal-dns container .-> RBAC
+    DYNU -. no Kubernetes API token .-> NONE[No cluster identity]
+
+    ARGO -->|AppProject-constrained reconciliation| WORKLOADS
+
+    HUMAN[Authenticated staff analyst] --> APP[AEGIS review UI]
+    APP --> SAWEB
