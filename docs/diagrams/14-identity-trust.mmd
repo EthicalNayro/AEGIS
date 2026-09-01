@@ -6,13 +6,14 @@ flowchart LR
     CI -->|OIDC token| STS[AWS STS]
     STS --> CIROLE[GitHub CI IAM role\nECR delivery only]
     CIROLE --> ECR[Amazon ECR]
-    CIROLE -. no EKS permission .- DENY1[EKS deployment denied]
+    CIROLE -. no EKS permission .-> DENY1[EKS deployment denied]
 
     subgraph EKS[Amazon EKS]
       SAWEB[ServiceAccount\naegis-status-page]
       SAAN[ServiceAccount\naegis-security-analyzer]
       SAEXT[ServiceAccount\naegis-external-dns]
       ARGO[Argo CD]
+      WORKLOADS[GitOps-managed workloads]
     end
 
     SAWEB -->|EKS Pod Identity| WEBROLE[Status-Page runtime/reviewer IAM role]
@@ -33,10 +34,10 @@ flowchart LR
 
     DYNU[Dynu webhook sidecar]
     SECRET[Secret: aegis-dynu-api] --> DYNU
-    SAEXT -. Kubernetes API token only mounted\ninto external-dns container .-> RBAC
+    SAEXT -. projected API token only for\nexternal-dns container .-> RBAC
     DYNU -. no Kubernetes API token .-> NONE[No cluster identity]
 
-    ARGO -->|AppProject-constrained reconciliation| EKS
+    ARGO -->|AppProject-constrained reconciliation| WORKLOADS
 
     HUMAN[Authenticated staff analyst] --> APP[AEGIS review UI]
     APP --> SAWEB
