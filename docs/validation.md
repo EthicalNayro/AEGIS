@@ -4,39 +4,40 @@
 
 Validation proves that AEGIS is not only defined in code but is deployable, observable, secure, and consistent from source through runtime.
 
-AEGIS has accumulated validated milestones throughout the project. Because Prometheus/Grafana and ExternalDNS were added after the earlier feature-freeze acceptance run, the repository now distinguishes **historical validated evidence** from the **current final acceptance gate**.
-
----
-
-## Current Final Acceptance Gate
-
-Run from the repository root:
+The final accepted state is reproducible from the repository root with:
 
 ```bash
 bash scripts/final-acceptance.sh
 ```
 
-The script fails closed unless all of the following are true:
-
-- the repository working tree is clean;
-- Terraform `eks-dev` formatting and validation pass;
-- `gitops/eks-dev` renders and passes a Kubernetes client dry-run;
-- `aegis-status-page` is `Synced` and `Healthy` in Argo CD;
-- `aegis-observability` is `Synced` and `Healthy` in Argo CD;
-- Status-Page and ExternalDNS Deployments have completed their rollouts;
-- ExternalDNS is still in the intentionally non-mutating `--dry-run` mode;
-- ExternalDNS can read the intended Ingress but cannot list Secrets or delete Ingresses;
-- the GitOps image digest exactly matches the Status-Page image running in EKS;
-- at least two Status-Page replicas are Ready across at least two Availability Zones;
-- the public HTTPS `/healthz` endpoint returns `HTTP 200` with `ok`.
-
-Only a run that reaches:
+The accepted run completed with:
 
 ```text
-AEGIS TECHNICAL VALIDATION: COMPLETE
+AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)
 ```
 
-should be treated as the final post-ExternalDNS acceptance result.
+---
+
+## Final 12-Check Acceptance Gate
+
+The successful final run proved:
+
+```text
+PASS  repository working tree is clean
+PASS  Terraform eks-dev formatting and validation
+PASS  GitOps render and Kubernetes client dry-run
+PASS  Argo CD aegis-status-page is Synced Healthy
+PASS  Argo CD aegis-observability is Synced Healthy
+PASS  Status-Page deployment rollout is complete
+PASS  ExternalDNS deployment rollout is complete
+PASS  ExternalDNS remains in dry-run safety mode
+PASS  ExternalDNS namespace RBAC is least privilege
+PASS  GitOps digest matches all EKS Status-Page application images
+PASS  Status-Page has multiple Ready replicas across Availability Zones
+PASS  public HTTPS health endpoint returns 200 ok
+```
+
+See [`final-acceptance.md`](final-acceptance.md) for the exact scope and interpretation.
 
 ---
 
@@ -44,158 +45,204 @@ should be treated as the final post-ExternalDNS acceptance result.
 
 | Area | Status |
 |---|---|
-| Terraform formatting / validation | ✅ validated |
-| Ansible syntax | ✅ validated |
-| Python source compilation | ✅ validated |
+| Terraform `eks-dev` formatting / validation | ✅ validated |
+| Terraform CI for both `dev` and `eks-dev` | ✅ configured with pinned Actions |
+| Ansible syntax / historical Phase 1 automation | ✅ validated |
+| Python source compilation / tests | ✅ validated |
 | Kustomize render | ✅ validated |
 | Kubernetes client dry-run | ✅ validated |
 | Repository hygiene | ✅ validated |
 | Secure Status-Page CI | ✅ validated |
+| Third-party Actions pinned by commit SHA | ✅ configured |
 | Trivy production-image gate | ✅ validated |
 | CycloneDX SBOM | ✅ validated |
 | GitHub OIDC authentication | ✅ validated |
 | Immutable ECR delivery | ✅ validated |
-| Safe GitOps synchronization | ✅ validated |
+| Safe stale-workflow rejection | ✅ validated fail-closed |
+| Argo CD application health | ✅ final gate passed |
+| Argo CD observability health | ✅ final gate passed |
 | PreSync migration hook | ✅ validated |
-| GitOps digest == EKS runtime digest | ✅ historically validated; rechecked by final gate |
-| Multiple Status-Page replicas | ✅ historically validated; rechecked by final gate |
-| Multi-AZ placement | ✅ historically validated; rechecked by final gate |
-| Public HTTPS health | ✅ historically validated; rechecked by final gate |
+| GitOps digest == EKS application-image digests | ✅ final gate passed |
+| Multiple Status-Page replicas | ✅ final gate passed |
+| Multi-AZ placement | ✅ final gate passed |
+| Public HTTPS health | ✅ final gate passed |
 | WAF block behavior | ✅ validated |
 | Security-event analyzer pipeline | ✅ validated |
 | Human review workflow | ✅ validated |
 | AI quality metrics | ✅ validated |
-| Prometheus / Grafana GitOps stack | ✅ validated |
-| AEGIS Platform Health dashboard | ✅ validated implementation and telemetry |
-| ExternalDNS + Dynu implementation | ✅ committed with safety boundaries |
-| ExternalDNS live DNS mutation | ⛔ intentionally disabled (`--dry-run`) |
-| Final Argo `Synced / Healthy` after ExternalDNS addition | ⏳ must pass final acceptance gate |
+| Prometheus / Grafana | ✅ final gate passed |
+| AEGIS Platform Health dashboard | ✅ validated |
+| Karpenter capacity recovery | ✅ validated |
+| node-exporter scheduling priority under Pod pressure | ✅ hardened and reconciled |
+| ExternalDNS + Dynu controller integration | ✅ final gate passed in dry-run |
+| ExternalDNS live Dynu mutation | ⛔ intentionally disabled |
 
 ---
 
-## Terraform and Configuration Validation
+## Terraform and Repository Validation
 
-The modern infrastructure is validated from:
+The modern infrastructure source is:
 
 ```text
 terraform/environments/eks-dev
 ```
 
-The final gate runs:
+The final gate verifies:
 
 ```bash
 terraform -chdir=terraform/environments/eks-dev fmt -check -recursive
 terraform -chdir=terraform/environments/eks-dev validate
 ```
 
-Terraform state, plans, local variable files, editor artifacts, and generated Python cache files remain excluded from source control.
+Terraform CI additionally validates both the historical `dev` environment and the final `eks-dev` environment. Third-party CI Actions are pinned to exact commit SHAs.
 
-The legacy EC2/Ansible layer remains part of the project history and has also been syntax-validated. PostgreSQL password-handling tasks use `no_log: true`.
+Terraform state, plan artifacts, variable files, credentials, editor artifacts, generated Python caches, and explicitly identified local static-generation scratch files remain excluded from source control.
 
 ---
 
 ## Secure CI and Supply Chain
 
-The Status-Page workflow validates source and renderer code, builds the production image, runs Trivy, enforces a fail-closed CRITICAL gate, authenticates to AWS with GitHub OIDC, publishes to immutable ECR, generates a CycloneDX SBOM, resolves the immutable digest, and updates GitOps state through the guarded synchronization path.
+The Status-Page secure workflow validates source, builds the application, scans with Trivy, fails closed on configured fixable CRITICAL vulnerabilities, authenticates to AWS through GitHub OIDC, publishes an immutable ECR artifact, generates a CycloneDX SBOM, resolves the image digest, and safely updates GitOps desired state.
 
-An intentionally stale workflow was previously prevented from overwriting newer desired state. That is evidence that the stale-run protection works rather than being only a design claim.
+A stale delivery run was previously prevented from overwriting newer source. Safe reruns also reuse an already-existing immutable commit image rather than attempting to mutate it.
 
-CI has no EKS deployment permission. Argo CD owns cluster reconciliation.
+GitHub Actions has no EKS deployment permission. Argo CD owns cluster reconciliation.
 
 ---
 
 ## GitOps and Runtime Consistency
 
-The authoritative Status-Page desired state is:
+The authoritative application desired state is:
 
 ```text
 gitops/eks-dev/
 ```
 
-The final acceptance gate renders this directory, performs a Kubernetes client dry-run, checks Argo application health, and compares the declared immutable image digest with the live EKS Deployment.
+Final validation rendered that tree, passed a Kubernetes client dry-run, confirmed Argo health, and compared the Git-declared immutable digest against all application-image uses in the live Status-Page Deployment:
 
-Database migrations execute through the dedicated Argo CD `PreSync` Job rather than application startup side effects.
+- `gunicorn`;
+- `render-configuration` init container;
+- `collect-static` init container.
+
+Database migration remains a dedicated Argo CD `PreSync` Job.
 
 ---
 
-## Availability and Resilience
+## Availability and Scheduling Resilience
 
-Validated resilience behaviors include:
+Final validation confirmed at least two Ready Status-Page replicas across at least two Availability Zones.
 
-- multiple Status-Page web replicas;
-- revision-aware multi-AZ topology spread;
+Additional implemented controls include:
+
+- revision-aware topology spread;
 - Pod Disruption Budgets;
-- readiness and liveness probes;
+- readiness/liveness probes;
 - RDS Multi-AZ;
-- Redis Multi-AZ / automatic failover;
-- Karpenter node scaling and recovery after Pod-density pressure;
-- HPA scaling on the dedicated demo workload.
+- Redis Multi-AZ and automatic failover;
+- Karpenter node-capacity recovery;
+- HPA behavior on the dedicated demo workload.
 
-Status-Page web HPA is **not** claimed as an active production configuration.
+Status-Page web HPA is **not** claimed as active production configuration.
+
+During final observability validation, a node-exporter Pod remained Pending because its target node had reached the Kubernetes Pod-density limit. Argo correctly stayed `Progressing` while the DaemonSet was incomplete. The final GitOps values were hardened with:
+
+```yaml
+prometheus-node-exporter:
+  priorityClassName: system-cluster-critical
+```
+
+After reconciliation, `aegis-observability` returned to `Synced / Healthy` and the final acceptance gate passed.
 
 ---
 
-## Public Edge and Security Pipeline
+## Public Edge and WAF
 
-Validated public-path behavior includes:
+Validated public behavior includes:
 
-- HTTP to HTTPS redirect;
-- HTTPS application access;
-- `/healthz` returning `200 ok`;
-- a controlled XSS-style request blocked by AWS WAF;
-- CloudWatch security signals;
-- EventBridge delivery to SQS;
-- analyzer processing through Bedrock Nova Pro;
-- structured-output validation;
-- conditional DynamoDB persistence;
-- SQS ACK only after successful persistence;
-- DLQ redrive after bounded repeated failures.
+- HTTP redirects to HTTPS;
+- ACM-backed TLS on the public ALB;
+- AWS WAF associated with the ALB;
+- `/healthz` returns `HTTP 200` and body `ok`;
+- a controlled XSS-like request was blocked by WAF;
+- WAF and ALB telemetry are observable through CloudWatch.
 
-AEGIS does not grant the model autonomous remediation authority.
+The WAF Web ACL is associated with the ALB; it should not be modeled as a separate serial network hop after the load balancer.
+
+---
+
+## Security Event Pipeline
+
+The active validated path is:
+
+```text
+WAF BlockedRequests metric
+ -> CloudWatch Alarm
+ -> EventBridge
+ -> SQS
+ -> AEGIS Analyzer
+ -> WAF enrichment
+ -> Amazon Bedrock Nova Pro
+ -> structured-output validation
+ -> conditional DynamoDB persistence
+ -> SQS ACK after persistence
+```
+
+The main queue has a DLQ after bounded repeated receive failures. AI output has no autonomous infrastructure mutation authority.
 
 ---
 
 ## Human Review and AI Quality
 
-A controlled security finding was reviewed through the staff-only workflow. Findings can transition conditionally from `PENDING_REVIEW` to an analyst verdict, preventing silent double review.
+A controlled finding was reviewed through the staff-only workflow. Review updates are conditional on the item remaining in `PENDING_REVIEW`, preventing silent double review.
 
-Reviewed findings feed the AI-quality tooling, which publishes metrics under:
+Reviewed findings feed quality metrics under:
 
 ```text
 AEGIS/AIQuality
 ```
 
-Small samples are marked `EARLY_SAMPLE`; the project does not claim reinforcement learning or automatic retraining.
+Small sample sizes are labeled `EARLY_SAMPLE`; AEGIS does not claim reinforcement learning or automatic retraining.
 
 ---
 
 ## Observability
 
-The `aegis-observability` Argo CD application manages Prometheus, Grafana, kube-state-metrics, node metrics, and the Git-provisioned **AEGIS Platform Health** dashboard.
+The dedicated `aegis-observability` Argo CD application manages Prometheus, Grafana, kube-state-metrics, node-exporter, and the Git-provisioned **AEGIS Platform Health** dashboard.
 
-Validated telemetry includes workload CPU/memory, replica availability, node readiness, restarts, deployment availability, and node Pod-density pressure. CloudWatch remains the complementary plane for WAF, ALB, event-pipeline, and AI-quality signals.
+Prometheus/Grafana cover Kubernetes and workload telemetry. CloudWatch remains complementary and authoritative for WAF, ALB, event-pipeline, alarm, and AI-quality signals.
 
 ---
 
 ## ExternalDNS / Dynu Boundary
 
-ExternalDNS v0.21 and the AEGIS Dynu webhook are committed with:
+ExternalDNS v0.21 and the AEGIS Dynu webhook are installed and reconciled with:
 
 - namespace-scoped Ingress read access;
 - no Kubernetes Secret list permission;
 - no Ingress delete permission;
-- an exact AEGIS Ingress label;
-- an exact hostname filter for `app.aegis-project.ddnsfree.com`;
+- exact label and hostname filtering;
 - CNAME-only handling;
-- an allowed `.elb.amazonaws.com` target suffix;
+- `.elb.amazonaws.com` target validation;
 - `upsert-only` policy;
-- the Dynu API credential supplied from a Kubernetes Secret, never Git;
+- Dynu credential supplied through a Kubernetes Secret, never Git;
 - `--dry-run` intentionally enabled.
 
-The final acceptance run must prove the Deployment is healthy before ExternalDNS is presented as runtime-validated. Automated DNS writes are not claimed while `--dry-run` remains enabled.
+The final gate proved the Deployment rollout, Argo health, least-privilege RBAC, and dry-run safety state. AEGIS does **not** claim active automated Dynu writes.
 
 ---
 
-## Acceptance Rule
+## Evidence Rule
 
-The earlier project milestones remain valid evidence for the behaviors they captured. The final submission state, however, should only be declared after the current repository revision passes `scripts/final-acceptance.sh` and the corresponding final screenshots are copied into `docs/screenshots/`.
+A documentation entry or planned filename is not itself screenshot proof. Screenshots are considered captured only when the corresponding image exists under `docs/screenshots/`.
+
+The runtime itself is technically accepted. Remaining screenshot-copy tasks are presentation/evidence curation, not engineering blockers.
+
+---
+
+## Acceptance Result
+
+```text
+AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)
+```
+
+This is the technical freeze point. Further changes should be limited to documentation, evidence organization, diagrams, repository metadata, and fixes for proven defects rather than new runtime features.
