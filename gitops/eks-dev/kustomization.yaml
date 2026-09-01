@@ -29,4 +29,4 @@ configMapGenerator:
 images:
   - name: 992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page
     newName: 992382545251.dkr.ecr.us-east-1.amazonaws.com/aegis-eks-dev-status-page
-    digest: sha256:517e9b7ed4016a646e05a053d9b59e5c78a20ff37c5f8d0f704760b60c584a04
+    digest: sha256:e3ca3cd4881db909c3706df484ee08ba246c6d96c007619b6455f22aa5f2c1e3
