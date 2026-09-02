@@ -105,8 +105,7 @@ Controls include:
 - Django `SECRET_KEY` supplied through a Kubernetes Secret created outside the public repository;
 - Dynu API credential supplied through a Kubernetes Secret and never committed;
 - no plaintext Terraform output for RDS credentials;
-- repository ignore rules for Terraform state, local variable files, editor artifacts, keys, environment files, and identified local static-generation scratch artifacts;
-- Ansible database-user tasks marked `no_log: true` to reduce credential exposure in logs.
+- repository ignore rules for Terraform state, local variable files, editor artifacts, keys, environment files, and identified local static-generation scratch artifacts.
 
 ---
 

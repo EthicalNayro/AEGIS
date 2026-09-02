@@ -3,7 +3,7 @@ name: AEGIS Status-Page Secure CI
 on:
   push:
     branches:
-      - phase-1-1/platform-modernization
+      - main
     paths:
       - "status-page/**"
       - ".github/workflows/status-page-ci.yml"
@@ -11,7 +11,7 @@ on:
 
   pull_request:
     branches:
-      - phase-1-1/platform-modernization
+      - main
     paths:
       - "status-page/**"
       - ".github/workflows/status-page-ci.yml"

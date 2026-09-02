@@ -23,7 +23,7 @@ resource "aws_iam_role" "github_actions_ci" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
 
-            "token.actions.githubusercontent.com:sub" = "repo:EthicalNayro@252874744/AEGIS@1338594901:ref:refs/heads/phase-1-1/platform-modernization"
+            "token.actions.githubusercontent.com:sub" = "repo:EthicalNayro@252874744/AEGIS@1338594901:ref:refs/heads/main"
           }
         }
       }

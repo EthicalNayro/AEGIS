@@ -116,14 +116,6 @@ This document records the failure modes AEGIS is explicitly designed to tolerate
 
 **Control:** RDS credentials remain in Secrets Manager; Django and Dynu credentials are provided through Kubernetes Secrets outside Git; final runtime configuration is rendered into a memory-backed volume.
 
-### Secret-safe automation output
-
-**Risk:** Ansible password variables appear in logs.
-
-**Control:** password-handling database tasks use `no_log: true`.
-
----
-
 ## 4. Kubernetes Runtime Safety
 
 ### Restricted privileges
@@ -217,7 +209,7 @@ prometheus-node-exporter:
 
 **Risk:** a mutable Action tag changes underneath CI.
 
-**Control:** all active third-party Actions are pinned by commit SHA. Terraform CI also validates both `dev` and `eks-dev`.
+**Control:** all active third-party Actions are pinned by commit SHA. Terraform CI validates the authoritative `eks-dev` environment.
 
 ### Immutable ECR artifacts
 
@@ -354,7 +346,7 @@ The repository excludes Terraform state/plans, local variable files, editor file
 
 **Risk:** Phase 1 EC2 documents/diagrams are mistaken for the final architecture.
 
-**Control:** final documentation explicitly labels the old EC2/Ansible material as historical and provides a dedicated final EKS diagram set.
+**Control:** superseded EC2/Ansible source is absent from the active tree; final documentation labels the remaining historical evidence and provides a dedicated EKS diagram set.
 
 ### Reproducible final acceptance gate
 

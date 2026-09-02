@@ -24,19 +24,36 @@
           <span><i class="mdi mdi-kubernetes" aria-hidden="true"></i> aegis-system</span>
         </div>
       </div>
-      <div class="ops-radar-wrap" aria-label="Analyst review completion {{ aegis_review_completion }} percent">
-        <div class="ops-radar" aria-hidden="true">
-          <span class="ops-radar-ring ops-radar-ring-one"></span>
-          <span class="ops-radar-ring ops-radar-ring-two"></span>
+      <div class="ops-radar-wrap" aria-label="{{ aegis_pending_count }} security alerts awaiting analyst review">
+        <div class="ops-radar {% if aegis_pending_count %}is-active{% else %}is-clear{% endif %}">
+          <span class="ops-radar-zone is-medium" aria-hidden="true"></span>
+          <span class="ops-radar-zone is-high" aria-hidden="true"></span>
+          <span class="ops-radar-zone is-critical" aria-hidden="true"></span>
           <span class="ops-radar-axis ops-radar-axis-x"></span>
           <span class="ops-radar-axis ops-radar-axis-y"></span>
-          <span class="ops-radar-sweep"></span>
-          <span class="ops-radar-target"></span>
+          <span class="ops-radar-sweep" aria-hidden="true"></span>
+          {% for point in aegis_radar_points %}
+            <a
+              class="ops-radar-point is-{{ point.severity|lower }}"
+              href="{% url 'plugins:aegis_review:finding_detail' point.incident_id %}"
+              style="--point-x: {{ point.x }}%; --point-y: {{ point.y }}%; --reveal-delay: {{ point.reveal_delay }}s"
+              aria-label="Open {{ point.severity|lower }} finding {{ point.incident_id }}"
+              title="{{ point.incident_id }} · {{ point.severity }}"
+            ><span class="sr-only">{{ point.incident_id }} · {{ point.severity }}</span></a>
+          {% endfor %}
+        </div>
+        <div class="ops-radar-legend" aria-label="Radar severity zones">
+          <span class="is-critical"><i aria-hidden="true"></i>Critical</span>
+          <span class="is-high"><i aria-hidden="true"></i>High</span>
+          <span class="is-medium"><i aria-hidden="true"></i>Medium</span>
         </div>
         <div class="ops-radar-caption">
-          {% if aegis_data_available %}
-            <strong>{{ aegis_review_completion }}%</strong>
-            <span>review completion</span>
+          {% if aegis_data_available and aegis_pending_count %}
+            <strong>{{ aegis_pending_count }}</strong>
+            <span>untreated alert{{ aegis_pending_count|pluralize }}</span>
+          {% elif aegis_data_available %}
+            <i class="mdi mdi-shield-check-outline" aria-hidden="true"></i>
+            <span>review queue clear</span>
           {% elif aegis_restricted %}
             <i class="mdi mdi-lock-outline" aria-hidden="true"></i>
             <span>analyst access required</span>
@@ -161,11 +178,49 @@
       {% endif %}
     </section>
 
-    <section class="ops-quick-grid" aria-label="Security operations shortcuts">
-      {% if aegis_enabled and not aegis_restricted %}<a class="ops-quick-action" href="{% url 'plugins:aegis_review:findings' %}"><span><i class="mdi mdi-shield-search-outline" aria-hidden="true"></i></span><div><strong>Investigate findings</strong><small>Review AI decisions and WAF evidence</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
-      {% if perms.incidents.view_incident %}<a class="ops-quick-action" href="{% url 'incidents:incident_list' %}"><span><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span><div><strong>Incident response</strong><small>Coordinate impact and recovery</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
-      {% if perms.components.view_component %}<a class="ops-quick-action" href="{% url 'components:component_list' %}"><span><i class="mdi mdi-server-network" aria-hidden="true"></i></span><div><strong>Service topology</strong><small>Inspect operational dependencies</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
-      {% if perms.extras.view_objectchange %}<a class="ops-quick-action" href="{% url 'extras:objectchange_list' %}"><span><i class="mdi mdi-history" aria-hidden="true"></i></span><div><strong>Audit timeline</strong><small>Trace administrative changes</small></div><i class="mdi mdi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+    <section class="ops-telemetry-section" aria-labelledby="ops-telemetry-title">
+      <header class="ops-telemetry-heading">
+        <div><span class="ops-section-kicker">CONTROL-PLANE SIGNALS</span><h2 id="ops-telemetry-title">Operational telemetry</h2><p>Live application and platform signals sourced from AEGIS and Status-Page.</p></div>
+        <span class="ops-telemetry-live"><i aria-hidden="true"></i>Live data</span>
+      </header>
+      <div class="ops-quick-grid">
+        {% if aegis_enabled and not aegis_restricted %}
+          <a class="ops-telemetry-card is-cyan" href="{% url 'plugins:aegis_review:findings' %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-magnify" aria-hidden="true"></i></span><div><strong>Investigate findings</strong><small>Latest AI confidence signal</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ aegis_pending_count }}</strong><span>pending reviews</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Latest AI confidence trend"><polyline points="{{ aegis_confidence_points }}"/></svg></div>
+            <footer><span>Average confidence</span><strong>{{ aegis_average_confidence }}%</strong></footer>
+          </a>
+        {% endif %}
+        {% if aegis_enabled and not aegis_restricted %}
+          <a class="ops-telemetry-card is-blue" href="{% if perms.incidents.view_incident %}{% url 'incidents:incident_list' %}{% else %}{% url 'plugins:aegis_review:observability' %}{% endif %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span><div><strong>Incident response</strong><small>Seven-day incident activity</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ open_incidents }}</strong><span>open incidents</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Seven-day incident activity"><polyline points="{{ incident_activity_points }}"/></svg></div>
+            <footer><span>Created in seven days</span><strong>{{ incident_activity_count }}</strong></footer>
+          </a>
+        {% endif %}
+        {% if aegis_enabled and not aegis_restricted %}
+          <a class="ops-telemetry-card is-green" href="{% if perms.components.view_component %}{% url 'components:component_list' %}{% else %}{% url 'plugins:aegis_review:observability' %}{% endif %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-server-network" aria-hidden="true"></i></span><div><strong>Service topology</strong><small>Component health profile</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            {% if perms.components.view_component %}
+              <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ component_health_percent }}%</strong><span>operational</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Service component health profile"><polyline points="{{ component_health_points }}"/></svg></div>
+              <footer><span>{{ component_total_count }} monitored components</span><strong>{{ component_impacted_count }} impacted</strong></footer>
+            {% else %}
+              <div class="ops-telemetry-locked"><i class="mdi mdi-lock-outline" aria-hidden="true"></i><div><strong>Permission required</strong><span>Component telemetry remains protected.</span></div></div>
+            {% endif %}
+          </a>
+        {% endif %}
+        {% if aegis_enabled and not aegis_restricted %}
+          <a class="ops-telemetry-card is-amber" href="{% if perms.extras.view_objectchange %}{% url 'extras:objectchange_list' %}{% else %}{% url 'plugins:aegis_review:observability' %}{% endif %}">
+            <header><span class="ops-telemetry-icon"><i class="mdi mdi-history" aria-hidden="true"></i></span><div><strong>Audit timeline</strong><small>Seven-day administrative activity</small></div><i class="mdi mdi-arrow-top-right"></i></header>
+            {% if perms.extras.view_objectchange %}
+              <div class="ops-telemetry-body"><div class="ops-telemetry-value"><strong>{{ audit_activity_count }}</strong><span>recorded changes</span></div><svg viewBox="0 0 160 48" role="img" aria-label="Seven-day administrative change activity"><polyline points="{{ audit_activity_points }}"/></svg></div>
+              <footer><span>Protected audit evidence</span><strong>7 days</strong></footer>
+            {% else %}
+              <div class="ops-telemetry-locked"><i class="mdi mdi-lock-outline" aria-hidden="true"></i><div><strong>Permission required</strong><span>Audit evidence remains protected.</span></div></div>
+            {% endif %}
+          </a>
+        {% endif %}
+      </div>
     </section>
   </div>
 {% endblock %}

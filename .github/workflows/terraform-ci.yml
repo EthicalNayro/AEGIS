@@ -5,22 +5,14 @@ on:
   push:
     branches:
       - main
-      - phase-1-1/platform-modernization
 
 permissions:
   contents: read
 
 jobs:
   terraform-validation:
-    name: Terraform validate (${{ matrix.environment }})
+    name: Terraform validate (eks-dev)
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        environment:
-          - dev
-          - eks-dev
 
     steps:
       - name: Checkout repository
@@ -35,7 +27,7 @@ jobs:
         run: terraform fmt -check -recursive terraform
 
       - name: Terraform init
-        run: terraform -chdir=terraform/environments/${{ matrix.environment }} init -backend=false
+        run: terraform -chdir=terraform/environments/eks-dev init -backend=false
 
       - name: Terraform validate
-        run: terraform -chdir=terraform/environments/${{ matrix.environment }} validate
+        run: terraform -chdir=terraform/environments/eks-dev validate

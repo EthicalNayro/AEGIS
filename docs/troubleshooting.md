@@ -6,6 +6,9 @@ This page records important issues encountered while building AEGIS and the engi
 
 # Phase 1 — Platform Foundation
 
+> [!NOTE]
+> This section is historical. The superseded EC2/Ansible source was retired after the EKS migration; Git history and the linked evidence images preserve these lessons.
+
 ## Terraform Owner Tag Enforcement
 
 ### Symptom
@@ -38,7 +41,7 @@ Private host management through AWS Systems Manager and interface VPC endpoints 
 
 ### Resolution
 
-The active design was simplified to SSH ProxyJump through the application EC2 instance. The experimental `iam` and `vpc_endpoints` Terraform modules were retained as inactive future-hardening code but removed from the active environment composition.
+The Phase 1 design was simplified to SSH ProxyJump through the application EC2 instance. The experimental `iam` and `vpc_endpoints` modules were never part of the active composition and were later removed with the rest of the superseded host-based infrastructure.
 
 ## Git Dubious Ownership
 
@@ -48,7 +51,7 @@ Ansible cloning/updating the Status Page repository could trigger Git ownership 
 
 ### Resolution
 
-The application directory is owned by the `status-page` service account and Git tasks execute as that same account.
+The application directory was owned by the `status-page` service account and Git tasks executed as that same account.
 
 ## Ansible Temporary Directory for Service Account
 
@@ -58,7 +61,7 @@ Running Ansible tasks with `become_user: status-page` caused warnings because th
 
 ### Resolution
 
-`/home/status-page` and `/home/status-page/.ansible/tmp` are explicitly created with restricted ownership and permissions.
+`/home/status-page` and `/home/status-page/.ansible/tmp` were created with restricted ownership and permissions.
 
 ## Django Permission Error from `/home/ubuntu`
 
@@ -68,7 +71,7 @@ The Django development server started successfully but its auto-reloader failed 
 
 ### Resolution
 
-Run the development server from `/opt/status-page` as the `status-page` user and use `--noreload` for controlled testing.
+The development server was run from `/opt/status-page` as the `status-page` user with `--noreload` for controlled testing.
 
 The final private testing workflow is documented in [Validation](validation.md) and uses an SSH tunnel rather than public TCP `8000`.
 
@@ -80,7 +83,7 @@ The final private testing workflow is documented in [Validation](validation.md) 
 
 ### Resolution
 
-A compatible version is pinned in `/opt/status-page/local_requirements.txt`:
+A compatible version was pinned in `/opt/status-page/local_requirements.txt`:
 
 ```text
 mkdocs-autorefs==1.0.1
@@ -94,9 +97,9 @@ mkdocs-autorefs==1.0.1
 
 ### Resolution
 
-Application-owned files are consistently owned by `status-page`, and the upgrade task executes as the application service account.
+Application-owned files were consistently owned by `status-page`, and the upgrade task executed as the application service account.
 
-The final Ansible run confirms the configuration settles into an idempotent state:
+The final historical Ansible run confirmed that the configuration settled into an idempotent state:
 
 ![Ansible final idempotency](screenshots/18-ansible-final-idempotency.png)
 
@@ -108,7 +111,7 @@ The source Nginx configuration was recopied on every run, then the server name w
 
 ### Resolution
 
-The initial remote copy uses `force: false`, preventing the already-customized configuration from being overwritten on every playbook run.
+The initial remote copy used `force: false`, preventing the already-customized configuration from being overwritten on every playbook run.
 
 ---
 
@@ -197,7 +200,7 @@ The credential remains outside Git and is supplied through environment configura
 
 ### Resolution
 
-A temporary restricted password file created with `mktemp` was used for the affected Ansible commands and deleted after the session.
+A temporary restricted password file created with `mktemp` was used for the affected historical Ansible commands and deleted after the session.
 
 This isolated the issue to the interactive prompt path without changing the encrypted Vault file or exposing the secret in the repository.
 

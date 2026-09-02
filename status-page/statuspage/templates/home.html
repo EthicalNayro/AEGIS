@@ -1,258 +1,220 @@
-{% extends 'base/home.html' %}
-{% load helpers %}
+{% extends 'base/layout.html' %}
+{% load static helpers %}
 
-{% block controls %}
-  {% if config.SITE_SUBSCRIBERS %}
-    <div>
-      <a href="{% url 'subscriber_subscribe' %}" class="bg-indigo-500 hover:bg-indigo-600 text-white shadow px-4 py-2 rounded-md" role="button">Get Notifications</a>
-    </div>
-  {% endif %}
+{% block title %}Platform Status{% endblock %}
+
+{% block head %}
+  <meta name="description" content="Live public service status for the AEGIS security operations platform.">
+  <link rel="stylesheet" href="{% static 'aegis-public-status.css' %}?v=1.0.0">
 {% endblock %}
 
-{% block home_content %}
-  <div class="flex flex-col space-y-4">
-    {% for incident_maintenance in open_incidents_maintenances %}
-      <div class="border-4 {{ incident_maintenance.get_impact_border_color }} rounded-md">
-        <div class="px-8 py-2 {{ incident_maintenance.get_impact_color }} text-white">{{ incident_maintenance.title }}</div>
-        <div class="px-8 py-2 flex flex-col space-y-4">
-          {% for update in incident_maintenance.updates.all %}
-            <div class="flex flex-col space-y-0.5">
-              <div class="flex flex-row space-x-2">
-                <div class="font-bold">
-                  {% if update.new_status %}
-                    {{ update.get_status_display }}
-                  {% else %}
-                    Update
-                  {% endif %}
-                </div>
-                <div>&mdash;</div>
-                <div class="break-words">{{ update.text|markdown }}</div>
-              </div>
-              <div class="text-gray-400">
-                {{ update.created }} by {% if update.user.get_full_name %}
-                  {{ update.user.get_full_name }}
+{% block content %}
+  {% if config.CUSTOM_STYLE_CSS %}<style>{{ config.CUSTOM_STYLE_CSS }}</style>{% endif %}
+  <div class="public-status-shell">
+    <header class="public-status-nav">
+      <a class="public-brand" href="{% url 'home' %}" aria-label="AEGIS platform status home">
+        <span class="public-brand-mark" aria-hidden="true">{% include 'includes/aegis_logo.html' %}</span>
+        <span class="public-brand-copy"><strong>AEGIS</strong><small>Platform Status</small></span>
+      </a>
+      <nav class="public-nav-actions" aria-label="Status page actions">
+        <a class="public-nav-link is-active" href="#service-health">Service health</a>
+        <a class="public-nav-link" href="#incident-history">Incident history</a>
+        {% if config.SITE_SUBSCRIBERS %}
+          <a class="public-subscribe" href="{% url 'subscriber_subscribe' %}"><i class="mdi mdi-bell-outline" aria-hidden="true"></i> Get updates</a>
+        {% endif %}
+        <a class="public-analyst-link" href="{% url 'login' %}?next={% url 'dashboard' %}"><i class="mdi mdi-lock-outline" aria-hidden="true"></i> Analyst access</a>
+      </nav>
+    </header>
+
+    <main class="public-status-main">
+      {{ config.CUSTOM_STYLE_HEADER|safe }}
+
+      <section class="public-status-hero" aria-labelledby="public-status-title">
+        <div class="public-hero-grid" aria-hidden="true"></div>
+        <div class="public-hero-glow" aria-hidden="true"></div>
+        <div class="public-hero-copy">
+          <span class="public-eyebrow"><i></i> AEGIS / PUBLIC RELIABILITY</span>
+          <h1 id="public-status-title">Security infrastructure.<br><em>Operationally transparent.</em></h1>
+          <p>Live availability and service-impact updates for the public AEGIS platform. Sensitive security findings and internal telemetry remain protected.</p>
+          <div class="public-trust-row" aria-label="AEGIS platform characteristics">
+            <span><i class="mdi mdi-shield-lock-outline" aria-hidden="true"></i> WAF protected</span>
+            <span><i class="mdi mdi-cloud-check-outline" aria-hidden="true"></i> Multi-AZ platform</span>
+            <span><i class="mdi mdi-account-check-outline" aria-hidden="true"></i> Human governed</span>
+          </div>
+        </div>
+
+        <div class="public-status-orbit is-{{ public_status.key }}" aria-hidden="true">
+          <span class="public-orbit-ring ring-one"></span>
+          <span class="public-orbit-ring ring-two"></span>
+          <span class="public-orbit-ring ring-three"></span>
+          <span class="public-orbit-axis axis-x"></span>
+          <span class="public-orbit-axis axis-y"></span>
+          <span class="public-orbit-core"><i class="mdi {{ public_status.icon }}"></i></span>
+          <span class="public-orbit-pulse"></span>
+        </div>
+      </section>
+
+      <section class="public-overall-card is-{{ public_status.key }}" aria-labelledby="overall-status-title">
+        <div class="public-overall-icon"><i class="mdi {{ public_status.icon }}" aria-hidden="true"></i></div>
+        <div class="public-overall-copy">
+          <span class="public-card-label">CURRENT PLATFORM STATUS</span>
+          <h2 id="overall-status-title">{{ public_status.title }}</h2>
+          <p>{{ public_status.summary }}</p>
+        </div>
+        <div class="public-overall-meta">
+          <span class="public-live-pill"><i aria-hidden="true"></i>{% if public_status.key == 'unconfigured' %}SETUP{% else %}LIVE{% endif %}</span>
+          <span>{% if public_latest_update %}Updated {{ public_latest_update|timesince }} ago{% else %}Awaiting first public signal{% endif %}</span>
+        </div>
+      </section>
+
+      <section class="public-kpi-grid" aria-label="Public platform summary">
+        <article class="public-kpi-card">
+          <span class="public-kpi-icon is-cyan"><i class="mdi mdi-server-network" aria-hidden="true"></i></span>
+          <div><small>Monitored services</small><strong>{{ public_component_count }}</strong><span>Public status components</span></div>
+        </article>
+        <article class="public-kpi-card">
+          <span class="public-kpi-icon is-green"><i class="mdi mdi-check-decagram-outline" aria-hidden="true"></i></span>
+          <div><small>Operational</small><strong>{{ public_operational_count }}</strong><span>Services reporting healthy</span></div>
+        </article>
+        <article class="public-kpi-card{% if public_impacted_count %} is-attention{% endif %}">
+          <span class="public-kpi-icon is-amber"><i class="mdi mdi-alert-outline" aria-hidden="true"></i></span>
+          <div><small>Impacted</small><strong>{{ public_impacted_count }}</strong><span>Degraded or unavailable</span></div>
+        </article>
+        <article class="public-kpi-card{% if open_incidents_maintenances %} is-critical{% endif %}">
+          <span class="public-kpi-icon is-red"><i class="mdi mdi-alert-decagram-outline" aria-hidden="true"></i></span>
+          <div><small>Active notices</small><strong>{{ open_incidents_maintenances|length }}</strong><span>Incidents and maintenance</span></div>
+        </article>
+      </section>
+
+      <div class="public-content-grid">
+        <section class="public-panel public-services-panel" id="service-health" aria-labelledby="service-health-title">
+          <header class="public-panel-head">
+            <div><span class="public-section-kicker">LIVE SERVICE HEALTH</span><h2 id="service-health-title">AEGIS service matrix</h2><p>Public, customer-impacting services only.</p></div>
+            <span class="public-panel-meta"><i aria-hidden="true"></i>{{ public_component_count }} monitored</span>
+          </header>
+
+          {% if componentgroups_components %}
+            <div class="public-service-groups">
+              {% for componentgroup_component in componentgroups_components %}
+                {% if componentgroup_component.components %}
+                  {% with componentgroup_component as componentgroup %}
+                    {% if componentgroup.components.all %}
+                      <article class="public-service-group">
+                        <header><div><span class="public-service-group-icon"><i class="mdi mdi-lan" aria-hidden="true"></i></span><div><h3>{{ componentgroup.name }}</h3>{% if componentgroup.description %}<p>{{ componentgroup.description }}</p>{% endif %}</div></div>{% componentgroup_status componentgroup=componentgroup %}</header>
+                        <div class="public-service-list">
+                          {% for component in componentgroup.components|get_visible_components %}
+                            <div class="public-service-row">
+                              <div class="public-service-name"><i class="mdi mdi-circle-medium" aria-hidden="true"></i><span>{% if component.link %}<a href="{{ component.link }}">{{ component.name }}</a>{% else %}{{ component.name }}{% endif %}{% if component.description %}<small>{{ component.description }}</small>{% endif %}</span></div>
+                              <span class="public-component-state is-{{ component.status }}"><i aria-hidden="true"></i>{{ component.get_status_display }}</span>
+                            </div>
+                            {% if component.show_historic_incidents %}
+                              <div class="public-uptime-row" aria-label="Ninety day status history for {{ component.name }}">
+                                <span>90 days</span><div class="public-uptime-bars">{{ component|get_historic_status }}</div><span>Today</span>
+                              </div>
+                            {% endif %}
+                          {% endfor %}
+                        </div>
+                      </article>
+                    {% endif %}
+                  {% endwith %}
                 {% else %}
-                  Automation
-                {% endif %}
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-        <div class="px-8 py-2 text-gray-400 text-sm">
-          {% if incident_maintenance.end_at %}<div>Ends at: {{ incident_maintenance.end_at }}</div>{% endif %}
-          {% with incident_maintenance.components|get_visible_components|join_components_with_groups as affected_components %}
-            {% if affected_components %}<div>Affected Components: {{ affected_components }}</div>{% endif %}
-          {% endwith %}
-        </div>
-      </div>
-    {% empty %}
-      <div class="rounded-md {{ status.0 }} p-4">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <i class="mdi {{ status.2 }} text-xl"></i>
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium {{ status.1 }}">{{ status.3 }}</h3>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-  <div class="flex flex-col bg-zinc-300 dark:bg-zinc-800 divide-y divide-zinc-200 dark:divide-zinc-700 rounded-md">
-    {% for componentgroup_component in componentgroups_components %}
-      {% if componentgroup_component.components %}
-        {% with componentgroup_component as componentgroup %}
-          <div x-data="{ open: {{ componentgroup.should_expand }} }" class="px-4 py-4">
-            <div @click="open = !open" role="button" class="flex flex-row space-x-4 items-center">
-              <div>
-                <i class="mdi mdi-plus-circle text-lg" x-show="!open"></i>
-                <i class="mdi mdi-minus-circle-outline text-lg" x-show="open"></i>
-              </div>
-              <div class="grow flex flex-row space-x-2 items-center">
-                {{ componentgroup.name }}
-                {% if componentgroup.description %}
-                  <div data-tooltip="{{ componentgroup.description }}"><i class="mdi mdi-help-circle-outline text-lg"></i></div>
-                {% endif %}
-              </div>
-              <div x-show="!open">{% componentgroup_status componentgroup=componentgroup %}</div>
-            </div>
-            <div class="flex flex-col pt-2 pl-8 divide-y divide-zinc-200 dark:divide-zinc-700" x-show="open">
-              {% for component in componentgroup.components|get_visible_components %}
-                <div>
-                  <div class="flex flex-row justify-between items-center py-2">
-                    <div class="flex flex-row space-x-2 items-center">
-                      {% if component.link %}
-                        <a href="{{ component.link }}">{{ component.name }}</a>
-                      {% else %}
-                        {{ component.name }}
-                      {% endif %}
-                      {% if component.description %}
-                        <div data-tooltip="{{ component.description }}"><i class="mdi mdi-help-circle-outline text-lg"></i></div>
-                      {% endif %}
-                    </div>
-                    <div class="{{ component.get_status_text_color }}" data-tooltip="Last Update: {{ component.last_updated }}">{{ component.get_status_display }}</div>
-                  </div>
-                  {% if component.show_historic_incidents %}
-                    <div class="px-2 py-2">
-                      <div class="flex justify-center">
-                        {{ component|get_historic_status }}
+                  {% with componentgroup_component as component %}
+                    <article class="public-service-group is-standalone">
+                      <div class="public-service-list">
+                        <div class="public-service-row">
+                          <div class="public-service-name"><span class="public-service-group-icon"><i class="mdi mdi-web" aria-hidden="true"></i></span><span>{% if component.link %}<a href="{{ component.link }}">{{ component.name }}</a>{% else %}{{ component.name }}{% endif %}{% if component.description %}<small>{{ component.description }}</small>{% endif %}</span></div>
+                          <span class="public-component-state is-{{ component.status }}"><i aria-hidden="true"></i>{{ component.get_status_display }}</span>
+                        </div>
+                        {% if component.show_historic_incidents %}
+                          <div class="public-uptime-row" aria-label="Ninety day status history for {{ component.name }}"><span>90 days</span><div class="public-uptime-bars">{{ component|get_historic_status }}</div><span>Today</span></div>
+                        {% endif %}
                       </div>
-                      <div class="px-1 flex flex-row items-center space-x-4 text-gray-600 dark:text-gray-500">
-                        <div class="shrink-0">90 days ago</div>
-                        <div class="grow h-px w-full bg-gray-600 dark:bg-gray-500"></div>
-                        <div class="shrink-0">Today</div>
-                      </div>
-                    </div>
-                  {% endif %}
-                </div>
+                    </article>
+                  {% endwith %}
+                {% endif %}
               {% endfor %}
             </div>
-          </div>
-        {% endwith %}
-      {% else %}
-        {% with componentgroup_component as component %}
-          <div>
-            <div class="px-4 py-4 flex flex-row justify-between items-center">
-              <div class="flex flex-row space-x-2 items-center">
-                {% if component.link %}
-                  <a href="{{ component.link }}">{{ component.name }}</a>
-                {% else %}
-                  {{ component.name }}
-                {% endif %}
-                {% if component.description %}
-                  <div data-tooltip="{{ component.description }}"><i class="mdi mdi-help-circle-outline text-lg"></i></div>
-                {% endif %}
-              </div>
-              <div class="{{ component.get_status_text_color }}" data-tooltip="Last Update: {{ component.last_updated }}">{{ component.get_status_display }}</div>
+          {% else %}
+            <div class="public-configuration-state">
+              <span class="public-state-visual"><i class="mdi mdi-radar" aria-hidden="true"></i></span>
+              <div><h3>Public service monitoring is being configured</h3><p>The platform is reachable, but no service components have been approved for public reporting yet. This status page will never infer health from missing data.</p></div>
             </div>
-            {% if component.show_historic_incidents %}
-              <div class="px-2 py-2">
-                <div class="flex justify-center">
-                  {{ component|get_historic_status }}
-                </div>
-                <div class="px-1 flex flex-row items-center space-x-4 text-gray-600 dark:text-gray-500">
-                  <div class="shrink-0">90 days ago</div>
-                  <div class="grow h-px w-full bg-gray-600 dark:bg-gray-500"></div>
-                  <div class="shrink-0">Today</div>
-                </div>
-              </div>
-            {% endif %}
+            <div class="public-architecture-grid" aria-label="AEGIS platform architecture">
+              <article><span><i class="mdi mdi-shield-lock-outline" aria-hidden="true"></i></span><div><small>PROTECTION LAYER</small><h3>Edge protection</h3><p>AWS WAF and managed edge controls protect the public application path.</p></div></article>
+              <article><span><i class="mdi mdi-brain" aria-hidden="true"></i></span><div><small>ANALYSIS LAYER</small><h3>AI-assisted triage</h3><p>Structured security analysis supports—not replaces—analyst judgment.</p></div></article>
+              <article><span><i class="mdi mdi-account-check-outline" aria-hidden="true"></i></span><div><small>GOVERNANCE LAYER</small><h3>Human review gate</h3><p>Protected staff workflows retain final control over security decisions.</p></div></article>
+            </div>
+          {% endif %}
+        </section>
+
+        <aside class="public-panel public-notices-panel" aria-labelledby="active-notices-title">
+          <header class="public-panel-head"><div><span class="public-section-kicker">SERVICE IMPACT</span><h2 id="active-notices-title">Active notices</h2><p>Current public incident response.</p></div></header>
+          {% if open_incidents_maintenances %}
+            <div class="public-notice-stack">
+              {% for notice in open_incidents_maintenances %}
+                <article class="public-notice-card">
+                  <div class="public-notice-title"><span class="public-notice-icon"><i class="mdi mdi-alert-circle-outline" aria-hidden="true"></i></span><div><small>{{ notice.get_status_display }}</small><h3>{{ notice.title }}</h3></div></div>
+                  {% for update in notice.updates.all|slice:":1" %}<p>{{ update.text|markdown }}</p><time>{{ update.created }}</time>{% endfor %}
+                  {% with notice.components|get_visible_components|join_components_with_groups as affected %}{% if affected %}<footer>Affected: {{ affected }}</footer>{% endif %}{% endwith %}
+                </article>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="public-clear-state"><span><i class="mdi mdi-shield-check-outline" aria-hidden="true"></i></span><h3>No active service-impacting incidents</h3><p>The public incident queue is clear.</p></div>
+          {% endif %}
+          <div class="public-protection-note"><i class="mdi mdi-information-outline" aria-hidden="true"></i><p><strong>Security by design</strong><br>Threat findings, request evidence and Kubernetes telemetry are intentionally excluded from this public view.</p></div>
+        </aside>
+      </div>
+
+      {% if metrics %}
+        <section class="public-panel public-metrics-panel" aria-labelledby="public-metrics-title">
+          <header class="public-panel-head"><div><span class="public-section-kicker">PUBLIC TELEMETRY</span><h2 id="public-metrics-title">Service performance</h2><p>Sanitized availability signals approved for public reporting.</p></div></header>
+          <div class="public-metric-grid">
+            {% for m in metrics %}<article class="public-metric-card"><header><span><i class="mdi mdi-chart-timeline-variant" aria-hidden="true"></i></span><h3>{{ m.title }}</h3></header><div class="public-metric-chart">{% metric metric=m range='12h' %}</div></article>{% endfor %}
           </div>
-        {% endwith %}
+        </section>
       {% endif %}
-    {% endfor %}
-  </div>
-  {% if metrics|length > 0 %}
-    <div class="flex flex-col space-y-4">
-      {% for m in metrics %}
-        <div class="grow bg-zinc-100 dark:bg-zinc-800 p-2 space-y-2 rounded-md shadow-lg">
-          <div x-data="{ open: {{ m.should_expand }} }" class="px-2 py-2">
-            <div @click="open = !open" role="button" class="flex flex-row space-x-4 items-center">
-              <div>
-                <i class="mdi mdi-plus-circle" x-show="!open"></i>
-                <i class="mdi mdi-minus-circle-outline" x-show="open"></i>
-              </div>
-              <div class="text-lg">{{ m.title }}</div>
-            </div>
-            <div class="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-700" x-show="open">
-              {% metric metric=m range='12h' %}
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-  {% if upcoming_maintenances|length > 0 %}
-    <div class="flex flex-col space-y-4">
-        <div class="text-2xl">Upcoming Maintenances</div>
-      {% for maintenance in upcoming_maintenances %}
-        <div class="border-4 {{ maintenance.get_impact_border_color }} rounded-md">
-          <div class="px-8 py-2 {{ maintenance.get_impact_color }} text-white">{{ maintenance.title }}</div>
-          <div class="px-8 py-2 flex flex-col space-y-4">
-            {% for update in maintenance.updates.all %}
-              <div class="flex flex-col space-y-0.5">
-                <div class="flex flex-row space-x-2">
-                  <div class="font-bold">
-                    {% if update.new_status %}
-                      {{ update.get_status_display }}
-                    {% else %}
-                      Update
-                    {% endif %}
-                  </div>
-                  <div>&mdash;</div>
-                  <div>{{ update.text|markdown }}</div>
-                </div>
-                <div class="text-gray-400">
-                  {{ update.created }} by {% if update.user.get_full_name %}
-                    {{ update.user.get_full_name }}
-                  {% else %}
-                    Automation
-                  {% endif %}
-                </div>
-              </div>
+
+      {% if upcoming_maintenances %}
+        <section class="public-panel public-maintenance-panel" aria-labelledby="maintenance-title">
+          <header class="public-panel-head"><div><span class="public-section-kicker">PLANNED WORK</span><h2 id="maintenance-title">Scheduled maintenance</h2><p>Upcoming work that may affect availability.</p></div></header>
+          <div class="public-maintenance-grid">
+            {% for maintenance in upcoming_maintenances %}
+              <article><span class="public-maintenance-date"><strong>{{ maintenance.scheduled_at|date:"d" }}</strong><small>{{ maintenance.scheduled_at|date:"M" }}</small></span><div><small>{{ maintenance.get_status_display }}</small><h3>{{ maintenance.title }}</h3><p>{{ maintenance.scheduled_at }} – {{ maintenance.end_at }}</p></div></article>
             {% endfor %}
           </div>
-          <div class="px-8 py-2 text-gray-400 text-sm">
-            <div>Scheduled at: {{ maintenance.scheduled_at }}</div>
-            <div>Ends at: {{ maintenance.end_at }}</div>
-            {% with maintenance.components|get_visible_components|join_components_with_groups as affected_components %}
-              {% if affected_components %}<div>Affected Components: {{ affected_components }}</div>{% endif %}
-            {% endwith %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-  <div class="flex flex-col space-y-4">
-    <div class="text-2xl">Past Incidents</div>
-    <div class="flex flex-col space-y-8">
-      {% if should_show_history %}
-        {% for date, incidents_maintenances in resolved_incidents_maintenances %}
-          <div class="flex flex-col space-y-4 divide-y divide-gray-300 dark:divide-gray-500">
-            <div class="text-xl">{{ date|format_date }}</div>
-            <div class="flex flex-col space-y-2">
-              {% for incident_maintenance in incidents_maintenances %}
-                <div>
-                  <div class="font-bold text-lg {{ incident_maintenance.get_impact_text_color }}">{{ incident_maintenance.title }}</div>
-                  <div class="flex flex-col space-y-2">
-                    {% for update in incident_maintenance.updates.all %}
-                      <div class="flex flex-col space-y-0.5">
-                        <div class="flex flex-row space-x-2">
-                          <div class="font-bold">
-                            {% if update.new_status %}
-                              {{ update.get_status_display }}
-                            {% else %}
-                              Update
-                            {% endif %}
-                          </div>
-                          <div>&mdash;</div>
-                          <div>{{ update.text|markdown }}</div>
-                        </div>
-                        <div class="text-gray-400">
-                          {{ update.created }} by {% if update.user.get_full_name %}
-                            {{ update.user.get_full_name }}
-                          {% else %}
-                            Automation
-                          {% endif %}
-                        </div>
-                      </div>
-                    {% endfor %}
-                  </div>
-                  <div class="py-2 text-gray-400 text-sm">
-                    {% with incident_maintenance.components|get_visible_components|join_components_with_groups as affected_components %}
-                      {% if affected_components %}<div>Affected Components: {{ affected_components }}</div>{% endif %}
-                    {% endwith %}
-                  </div>
-                </div>
-              {% empty %}
-                <div class="text-gray-400">No incidents or maintenances reported.</div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div>No past Incidents and Maintenances</div>
+        </section>
       {% endif %}
-    </div>
+
+      <section class="public-panel public-history-panel" id="incident-history" aria-labelledby="incident-history-title">
+        <header class="public-panel-head">
+          <div><span class="public-section-kicker">RELIABILITY RECORD</span><h2 id="incident-history-title">Seven-day incident history</h2><p>Public service-impacting events and maintenance activity.</p></div>
+          <span class="public-history-summary"><i class="mdi mdi-check-circle-outline" aria-hidden="true"></i>{% if public_history_has_events %}Activity recorded{% else %}No reported impact{% endif %}</span>
+        </header>
+        <div class="public-history-strip" aria-label="Seven day public incident activity">
+          {% for day in public_history_days %}
+            <div class="public-history-day{% if day.has_events %} has-events{% endif %}"><span>{{ day.date|date:"D" }}</span><i aria-hidden="true"></i><strong>{{ day.date|date:"M d" }}</strong><small>{% if day.has_events %}{{ day.items|length }} event{{ day.items|length|pluralize }}{% else %}Clear{% endif %}</small></div>
+          {% endfor %}
+        </div>
+        {% if public_history_has_events %}
+          <div class="public-history-events">
+            {% for day in public_history_days %}{% if day.has_events %}
+              <div class="public-history-date"><time>{{ day.date|date:"F d, Y" }}</time>{% for item in day.items %}<article><span class="public-event-marker"></span><div><small>{{ item.get_status_display }}</small><h3>{{ item.title }}</h3>{% for update in item.updates.all|slice:":1" %}<p>{{ update.text|markdown }}</p>{% endfor %}</div></article>{% endfor %}</div>
+            {% endif %}{% endfor %}
+          </div>
+        {% else %}
+          <div class="public-history-empty"><i class="mdi mdi-calendar-check-outline" aria-hidden="true"></i><span><strong>No public incidents reported in the last seven days.</strong><small>Operational security findings are tracked separately in the protected analyst workspace.</small></span></div>
+        {% endif %}
+      </section>
+
+      <section class="public-status-footer-cta">
+        <div><span class="public-section-kicker">STAY INFORMED</span><h2>Need platform updates?</h2><p>Subscribe to public incident and maintenance notifications, or sign in to the protected analyst workspace.</p></div>
+        <div>{% if config.SITE_SUBSCRIBERS %}<a class="public-primary-button" href="{% url 'subscriber_subscribe' %}"><i class="mdi mdi-bell-ring-outline" aria-hidden="true"></i> Subscribe to updates</a>{% endif %}<a class="public-secondary-button" href="{% url 'login' %}?next={% url 'dashboard' %}"><i class="mdi mdi-lock-outline" aria-hidden="true"></i> Analyst access</a></div>
+      </section>
+
+      {{ config.CUSTOM_STYLE_FOOTER|safe }}
+    </main>
+
+    <footer class="public-site-footer"><div><span class="public-brand-mark is-small" aria-hidden="true">{% include 'includes/aegis_logo.html' %}</span><span><strong>AEGIS Security Operations</strong><small>Public platform reliability</small></span></div><p>Operational transparency without exposing sensitive security telemetry.</p></footer>
   </div>
 {% endblock %}
