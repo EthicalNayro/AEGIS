@@ -101,7 +101,7 @@ Terraform state, plan artifacts, variable files, credentials, editor artifacts, 
 
 ## Secure CI and Supply Chain
 
-The Status-Page secure workflow validates source, builds the application, scans with Trivy, fails closed on configured fixable CRITICAL vulnerabilities, authenticates to AWS through GitHub OIDC, publishes an immutable ECR artifact, generates a CycloneDX SBOM, resolves the image digest, and safely updates GitOps desired state.
+The Status-Page secure workflow validates source, builds the application, scans with Trivy, fails closed on configured fixable CRITICAL vulnerabilities, authenticates to AWS through GitHub OIDC, publishes an immutable ECR artifact, generates a CycloneDX SBOM, resolves the image digest, and packages a protected GitOps promotion. The desired-state digest reaches `main` only through a pull request.
 
 A stale delivery run was previously prevented from overwriting newer source. Safe reruns also reuse an already-existing immutable commit image rather than attempting to mutate it.
 

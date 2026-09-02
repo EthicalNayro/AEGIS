@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "status-page/**"
-      - ".github/workflows/status-page-ci.yml"
       - "gitops/eks-dev/render-configuration.py"
 
   pull_request:
@@ -117,7 +116,7 @@ jobs:
     if: github.event_name != 'pull_request'
 
     permissions:
-      contents: write
+      contents: read
       id-token: write
 
     steps:
@@ -351,37 +350,64 @@ jobs:
           grep -A4 '^images:' \
             gitops/eks-dev/kustomization.yaml
 
-      - name: Commit GitOps desired state
+      - name: Package protected GitOps promotion
+        id: promotion
         shell: bash
         run: |
           if git diff --quiet -- gitops/eks-dev/kustomization.yaml; then
             echo "GitOps already references this digest."
+            echo "required=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          git config \
-            user.name "github-actions[bot]"
+          git diff -- \
+            gitops/eks-dev/kustomization.yaml \
+            > aegis-status-page-gitops.patch
 
-          git config \
-            user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          test -s aegis-status-page-gitops.patch
 
-          git add \
+          echo "required=true" >> "$GITHUB_OUTPUT"
+          echo "Protected GitOps promotion artifact prepared."
+
+      - name: Upload protected GitOps promotion
+        if: steps.promotion.outputs.required == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aegis-status-page-gitops-${{ github.sha }}
+          path: |
+            aegis-status-page-gitops.patch
             gitops/eks-dev/kustomization.yaml
-
-          git commit \
-            -m "chore(gitops): deploy ${IMAGE_TAG} [skip ci]"
-
-          git push \
-            origin "HEAD:${GITHUB_REF_NAME}"
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Delivery summary
+        env:
+          PROMOTION_REQUIRED: ${{ steps.promotion.outputs.required }}
         run: |
           echo "======================================"
-          echo "AEGIS SECURE DELIVERY COMPLETE"
+          echo "AEGIS SECURE ARTIFACT DELIVERY COMPLETE"
           echo "======================================"
           echo "Image tag:    $IMAGE_TAG"
           echo "Image URI:    $IMAGE_URI"
           echo "Image digest: ${{ steps.digest.outputs.digest }}"
           echo
           echo "GitHub Actions did NOT access EKS."
-          echo "Argo CD will reconcile Git -> EKS."
+
+          if [ "$PROMOTION_REQUIRED" = "true" ]; then
+            echo "GitOps promotion requires a protected pull request."
+            echo "Download the GitOps promotion artifact from this run."
+            echo "::notice title=Protected GitOps promotion required::Download the GitOps artifact and promote the digest through a reviewed pull request."
+
+            {
+              echo "### Protected GitOps promotion required"
+              echo
+              echo "The immutable image and SBOM were published successfully."
+              echo "Download the GitOps promotion artifact from this run and apply it through a pull request to main."
+              echo
+              echo "GitHub Actions did not access EKS or bypass branch protection."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "GitOps already references this immutable digest."
+          fi
+
+          echo "Argo CD reconciles only reviewed Git -> EKS."

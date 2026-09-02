@@ -32,7 +32,7 @@ AEGIS is a portfolio-scale DevSecOps and cloud-security platform built as one co
 |---|---|
 | **Runtime** | Private Amazon EKS workers, multi-AZ Status-Page replicas, health probes, topology spread, Pod Disruption Budgets, Karpenter recovery, RDS PostgreSQL, and ElastiCache Redis |
 | **Security operations** | AWS WAF telemetry, CloudWatch alarms, EventBridge, SQS/DLQ, a Pod Identity-backed analyzer, Amazon Bedrock, validated structured output, DynamoDB findings, and conditional human review |
-| **Secure delivery** | GitHub OIDC, pinned third-party Actions, container validation, Trivy gates, CycloneDX SBOM, immutable ECR digests, guarded GitOps updates, and Argo CD reconciliation |
+| **Secure delivery** | GitHub OIDC, pinned third-party Actions, container validation, Trivy gates, CycloneDX SBOM, immutable ECR digests, protected GitOps promotion PRs, and Argo CD reconciliation |
 | **Observability** | Prometheus, Grafana, kube-state-metrics, protected node telemetry, CloudWatch edge/security signals, Argo health, and a custom **AEGIS Platform Health** dashboard |
 
 The validated showcase environment is `eks-dev` in `us-east-1`. The public application path is available through `https://app.aegis-project.ddnsfree.com` while the demonstration environment is active; security operations remain staff-only.
@@ -132,7 +132,8 @@ The complete validation trail is mapped to project claims in the [evidence index
 - multi-stage image build and pinned production base image
 - Trivy vulnerability/secret scanning and CycloneDX SBOM generation
 - immutable tags plus digest-pinned Kubernetes deployments
-- stale-workflow protection that fails closed before a GitOps overwrite
+- stale-workflow protection that fails closed before producing a GitOps promotion
+- branch-protected digest promotion through a reviewed Git change
 - Argo CD reconciliation with a database migration `PreSync` Job
 - final desired-digest vs runtime-digest verification
 
@@ -162,7 +163,7 @@ AEGIS was validated as an end-to-end running system, not only as infrastructure 
 | **Human governance** | a WAF-backed finding received a conditional analyst verdict |
 | **Platform visibility** | Prometheus, Grafana, Kubernetes dashboards, and AEGIS Platform Health were verified |
 | **DNS automation boundary** | ExternalDNS rollout and least-privilege RBAC passed while `--dry-run` remained enabled |
-| **Supply chain** | OIDC authentication, image scan, SBOM, immutable ECR publish, and guarded GitOps update succeeded |
+| **Supply chain** | OIDC authentication, image scan, SBOM, immutable ECR publish, and branch-protected GitOps promotion succeeded |
 
 See the [final acceptance proof](docs/final-acceptance.md), complete [validation matrix](docs/validation.md), and [evidence index](docs/evidence.md).
 

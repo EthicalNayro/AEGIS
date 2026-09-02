@@ -127,11 +127,12 @@ The Status-Page delivery workflow includes:
 - CycloneDX SBOM generation and artifact retention;
 - concurrency controls;
 - idempotent image reuse on safe reruns;
-- fail-closed GitOps synchronization when a workflow is stale.
+- fail-closed GitOps synchronization when a workflow is stale;
+- protected pull-request promotion for every desired-state digest change.
 
 The stale-workflow protection was validated in practice: an older delivery run was refused after newer non-GitOps source advanced the branch, preventing stale desired state from overwriting newer source.
 
-Terraform CI validates both the historical `dev` environment and the final `eks-dev` environment. It validates infrastructure code; the repository does not claim an automated approval-gated Terraform apply workflow.
+Terraform CI validates the authoritative `eks-dev` environment. It validates infrastructure code; the repository does not claim an automated approval-gated Terraform apply workflow.
 
 ---
 
@@ -141,7 +142,10 @@ GitHub Actions is CI, not the Kubernetes deployment authority.
 
 ```text
 GitHub Actions
-  -> ECR + guarded Git desired-state update
+  -> ECR + protected GitOps promotion artifact
+
+Reviewed pull request
+  -> Git desired-state update
 
 Argo CD
   -> EKS reconciliation
