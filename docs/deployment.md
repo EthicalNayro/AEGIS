@@ -4,29 +4,11 @@
 
 The final AEGIS delivery model separates **infrastructure validation**, **application CI**, and **Kubernetes CD**.
 
-```text
-Developer
-   |
-GitHub
-   |
-   +--> Terraform CI
-   |      -> fmt / init -backend=false / validate
-   |      -> dev + eks-dev
-   |
-   +--> Status-Page Secure CI
-          -> validate / build / Trivy / SBOM
-          -> GitHub OIDC
-          -> immutable ECR image
-          -> guarded GitOps digest update
-                    |
-                    v
-                  Argo CD
-                    |
-                    v
-                    EKS
-```
+![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.svg)
 
-GitHub Actions does not deploy the Status-Page directly with `kubectl` and the Status-Page CI role has no EKS deployment permission. Argo CD continuously reconciles Kubernetes state from Git.
+GitHub Actions does not deploy the Status-Page directly with `kubectl` and the Status-Page CI role has no EKS deployment permission. Argo CD continuously reconciles Kubernetes state from reviewed Git desired state.
+
+The rendered SVG is the portfolio-facing delivery view. The editable engineering source remains [`diagrams/11-ci-cd-gitops.mmd`](diagrams/11-ci-cd-gitops.mmd).
 
 ---
 
@@ -51,11 +33,7 @@ The active tree contains only the EKS-oriented deployment. The superseded EC2/An
 
 Terraform owns the AWS infrastructure for `eks-dev`, including the VPC/EKS foundation, managed data services, ECR, WAF/observability resources, event queues, DynamoDB findings storage, and workload IAM roles.
 
-The repository CI validates the authoritative Terraform environment:
-
-```text
-terraform/environments/eks-dev
-```
+The repository CI validates the authoritative Terraform environment at `terraform/environments/eks-dev`.
 
 The workflow runs formatting, `init -backend=false`, and validation using pinned third-party GitHub Actions.
 
@@ -115,18 +93,7 @@ The secure Status-Page workflow performs two major jobs.
 
 CI uses short-lived AWS credentials from GitHub's OIDC token rather than repository access keys.
 
-```text
-GitHub Actions
-   |
-   | OIDC token
-   v
-AWS STS
-   |
-   v
-AEGIS GitHub CI IAM role
-```
-
-The trust policy is scoped to the exact repository/deployment branch. The role can deliver to ECR but cannot deploy directly to EKS and cannot pass arbitrary IAM roles.
+The GitHub workflow receives an OIDC token, exchanges it through AWS STS, and assumes the branch-scoped AEGIS GitHub CI IAM role. The role can deliver to ECR but cannot deploy directly to EKS and cannot pass arbitrary IAM roles.
 
 ---
 
@@ -134,20 +101,7 @@ The trust policy is scoped to the exact repository/deployment branch. The role c
 
 The deployment uses ECR image digests rather than mutable runtime tags.
 
-```text
-git-<commit>
-    |
-    v
-ECR immutable image
-    |
-    v
-sha256:<digest>
-    |
-    v
-gitops/eks-dev/kustomization.yaml
-```
-
-Argo CD therefore deploys the exact artifact declared in Git.
+A build starts from the immutable Git-derived image tag, resolves the resulting ECR `sha256` digest, and promotes that digest into `gitops/eks-dev/kustomization.yaml`. Argo CD therefore deploys the exact artifact declared in Git.
 
 The final acceptance gate compares the GitOps digest with all application-image uses in the live Status-Page Deployment:
 
@@ -190,12 +144,7 @@ The AppProject restricts source, destination, and allowed resource kinds.
 
 `gitops/eks-dev/` is the authoritative production-style desired state. Duplicate legacy production manifests were removed from competing source-of-truth locations.
 
-The final acceptance gate requires both:
-
-```text
-aegis-status-page   Synced / Healthy
-aegis-observability Synced / Healthy
-```
+The final acceptance gate requires both `aegis-status-page` and `aegis-observability` to reach `Synced / Healthy`.
 
 ---
 
@@ -203,19 +152,7 @@ aegis-observability Synced / Healthy
 
 Django migrations execute through a dedicated Kubernetes Job annotated as an Argo CD `PreSync` hook.
 
-```text
-Git desired state
-   |
-Argo sync
-   |
-PreSync migration Job
-   |
-Django migrate --noinput
-   |
-Hook succeeds
-   |
-Application rollout
-```
+Argo CD applies the reviewed Git desired state, runs the migration Job first, waits for `Django migrate --noinput` to succeed, and only then continues the application rollout.
 
 The Job uses the same immutable application image and workload security boundaries as the application.
 
@@ -245,22 +182,11 @@ Sensitive runtime Secrets are intentionally not stored in the public repository.
 
 ## Public Traffic
 
-The production request path is:
+![AEGIS final platform architecture](diagrams/20-aegis-final-platform.svg)
 
-```text
-HTTP :80 -> redirect to HTTPS
-HTTPS :443
-  -> Internet-facing ALB
-       |-- ACM certificate attached
-       `-- AWS WAF Web ACL associated
-  -> Kubernetes Ingress
-  -> Service :8080
-  -> Nginx
-  -> Gunicorn
-  -> Django
-```
+The production request path redirects HTTP `:80` to HTTPS and serves public traffic through the Internet-facing ALB on `:443`. ACM provides TLS and AWS WAF is associated with the ALB. The ALB-class Kubernetes Ingress routes traffic to Service `:8080`, then to unprivileged Nginx, Gunicorn, and Django on private EKS workers.
 
-ACM and WAF are relationships on the ALB; they should not be modeled as serial hops after it.
+ACM and WAF are relationships on the ALB; they are not modeled as serial hops after it.
 
 Health endpoint:
 
@@ -285,17 +211,15 @@ The public hostname is managed by Dynu:
 app.aegis-project.ddnsfree.com
 ```
 
-ExternalDNS v0.21 is deployed with an AEGIS Dynu webhook provider. The accepted state intentionally keeps:
-
-```text
---dry-run
-```
+ExternalDNS v0.21 is deployed with an AEGIS Dynu webhook provider. The accepted state intentionally keeps `--dry-run` enabled.
 
 The final gate verifies the ExternalDNS rollout and least-privilege RBAC while ensuring dry-run remains enabled. Active automated Dynu mutation is not claimed.
 
 ---
 
 ## Observability Rollout Note
+
+![AEGIS multi-AZ resilience and observability architecture](diagrams/23-aegis-resilience-observability.svg)
 
 During final observability validation, one node-exporter Pod could not schedule because its target node reached the Pod-density limit. The GitOps values were hardened with `system-cluster-critical` priority for node-exporter. After reconciliation, the observability Argo application returned to `Synced / Healthy`.
 
