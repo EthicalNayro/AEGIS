@@ -2,7 +2,7 @@
 
 # AEGIS
 
-### AI-assisted cloud security operations on AWS — governed by humans, hardened on Kubernetes, and delivered through GitOps
+### AI-assisted cloud security operations on AWS - governed by humans, hardened on Kubernetes, and delivered through GitOps
 
 AEGIS turns AWS edge telemetry into structured, reviewable security findings while operating a production-style workload on Amazon EKS.
 
