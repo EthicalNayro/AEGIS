@@ -6,29 +6,21 @@ AEGIS uses defense in depth across network boundaries, workload identity, softwa
 
 The final platform intentionally minimizes direct trust relationships. Public traffic terminates at the ALB/WAF boundary, Kubernetes workers remain private, managed data services are private, CI does not receive cluster deployment access, and AI output is never treated as authoritative without validation and human review.
 
+### Security architecture at a glance
+
+![AEGIS final platform architecture](diagrams/20-aegis-final-platform.svg)
+
+![AEGIS security signal to human decision architecture](diagrams/21-aegis-security-human-decision.svg)
+
+The rendered SVGs are the portfolio-facing security architecture. Editable Mermaid files under [`docs/diagrams/`](diagrams/README.md) remain engineering sources only.
+
 ---
 
 ## Internet Edge
 
-The public path is:
+The public path is Dynu DNS → Internet-facing ALB on HTTPS `443` → ALB-class Kubernetes Ingress → Status-Page Service `:8080` → private EKS Pods.
 
-```text
-Internet
-  |
-Dynu DNS
-  |
-Internet-facing ALB :443
-  |-- ACM certificate attached
-  `-- AWS WAF Web ACL associated
-  |
-Kubernetes Ingress
-  |
-Status-Page Service :8080
-  |
-private EKS Pods
-```
-
-ACM and AWS WAF are attached/associated with the ALB. They are security/control-plane relationships on the edge resource, not serial network appliances after the load balancer.
+ACM provides the TLS certificate and AWS WAF is associated with the ALB. ACM and WAF are security/control-plane relationships on the edge resource, not serial network appliances after the load balancer.
 
 Controls include:
 
@@ -91,6 +83,8 @@ The analyzer receives only the permissions required for the security pipeline. T
 
 No long-lived application AWS access keys are stored in the repository or application image.
 
+For the detailed identity/trust engineering source, see [`diagrams/14-identity-trust.mmd`](diagrams/14-identity-trust.mmd).
+
 ---
 
 ## Secrets and Runtime Configuration
@@ -110,6 +104,8 @@ Controls include:
 ---
 
 ## Software Supply-Chain Security
+
+![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.svg)
 
 The active CI workflows use third-party GitHub Actions pinned by exact commit SHA.
 
@@ -138,18 +134,7 @@ Terraform CI validates the authoritative `eks-dev` environment. It validates inf
 
 ## GitOps Security Boundary
 
-GitHub Actions is CI, not the Kubernetes deployment authority.
-
-```text
-GitHub Actions
-  -> ECR + protected GitOps promotion artifact
-
-Reviewed pull request
-  -> Git desired-state update
-
-Argo CD
-  -> EKS reconciliation
-```
+GitHub Actions is CI, not the Kubernetes deployment authority. CI can publish the immutable artifact and prepare a protected GitOps promotion, but Argo CD is the component that reconciles reviewed Git desired state into EKS.
 
 The Argo CD Application is constrained by an AppProject with explicit source, destination, and resource-kind boundaries. Automated sync uses self-heal and pruning so drift is reconciled back to reviewed Git state.
 
@@ -187,20 +172,11 @@ The final 12-check acceptance run proved the controller rollout, least-privilege
 
 ## Security Event Pipeline
 
-The active WAF-driven security path is:
+The authoritative event-processing visual is [`21-aegis-security-human-decision.svg`](diagrams/21-aegis-security-human-decision.svg).
 
-```text
-WAF BlockedRequests metric
-  -> CloudWatch Alarm
-  -> EventBridge
-  -> SQS
-  -> AEGIS Analyzer
-  -> Bedrock
-  -> DynamoDB
-  -> Human Review
-```
+The active WAF-driven path uses CloudWatch Alarm → EventBridge → SQS → AEGIS Analyzer → Amazon Bedrock → validated DynamoDB finding → protected human review.
 
-SQS buffers events between production and analysis. A DLQ captures repeatedly failing events.
+SQS buffers events between production and analysis. A DLQ captures repeatedly failing events after normal retry exhaustion.
 
 The analyzer acknowledges a message only after persistence succeeds. DynamoDB conditional writes make processing idempotent when an event is replayed.
 
