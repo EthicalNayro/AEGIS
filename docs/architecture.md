@@ -15,41 +15,41 @@ The final accepted state passed [`scripts/final-acceptance.sh`](../scripts/final
 
 ---
 
+## Architecture at a glance
+
+The rendered portfolio diagrams below are the primary visual representation of the final AEGIS architecture. The Mermaid files under [`docs/diagrams/`](diagrams/README.md) remain editable engineering sources, not the primary showcase rendering.
+
+### Final platform architecture
+
+![AEGIS final platform architecture](diagrams/20-aegis-final-platform.svg)
+
+The accepted topology separates the public edge, private Amazon EKS runtime, managed data services, AI/security services, GitOps control plane, and deliberate DNS automation boundary.
+
+### Security signal to human decision
+
+![AEGIS security signal to human decision architecture](diagrams/21-aegis-security-human-decision.svg)
+
+A blocked-request signal is routed through CloudWatch, EventBridge and SQS, analyzed by the AEGIS analyzer with Amazon Bedrock, validated before persistence, and finalized only through protected staff review.
+
+### Secure CI/CD and GitOps
+
+![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.svg)
+
+CI validates and publishes an immutable artifact; Git declares the desired digest; Argo CD owns cluster reconciliation. The GitHub CI role has no direct EKS deployment authority.
+
+### Multi-AZ resilience and observability
+
+![AEGIS multi-AZ resilience and observability architecture](diagrams/23-aegis-resilience-observability.svg)
+
+The runtime uses multiple Ready replicas across Availability Zones with probes, topology spread, disruption budgets, Karpenter recovery capacity, managed data services, and complementary Prometheus/Grafana and CloudWatch observability.
+
+---
+
 ## Final Platform Topology
 
-```text
-                         Internet
-                            |
-                 app.aegis-project.ddnsfree.com
-                            |
-                         Dynu DNS
-                            |
-                            v
-                Internet-facing AWS ALB :443
-                  |                    |
-          ACM certificate         AWS WAF Web ACL
-             attached                associated
-                  |                    |
-                  +---------+----------+
-                            |
-                       EKS Ingress
-                            |
-                    Status-Page Service
-                            |
-             +--------------+--------------+
-             |                             |
-       Web replica A                  Web replica B
-       private / AZ-A                 private / AZ-B
-             |                             |
-             +---------------+-------------+
-                             |
-                +------------+------------+
-                |                         |
-          RDS PostgreSQL            ElastiCache Redis
-          Multi-AZ/private          Multi-AZ/private
-```
+Public traffic resolves through Dynu DNS to an Internet-facing AWS Application Load Balancer on HTTPS `443`. ACM provides the certificate and AWS WAF is associated with the ALB. Traffic is then routed by the ALB-class Kubernetes Ingress to the Status-Page service and private EKS Pods.
 
-AWS WAF and ACM are attached/associated with the ALB. They are **not** separate serial network appliances after the load balancer.
+AWS WAF and ACM are attached/associated with the ALB. They are **not** modeled as separate serial network appliances after the load balancer.
 
 EKS workers are private. Public exposure is concentrated at the ALB/WAF trust boundary.
 
@@ -89,21 +89,7 @@ The web topology rule is revision-aware through `matchLabelKeys: pod-template-ha
 
 ## Application Runtime
 
-```text
-ALB (ACM + WAF associated)
-  |
-Ingress
-  |
-Service :8080
-  |
-Nginx unprivileged :8080
-  |
-Gunicorn :8000
-  |
-Django / Status-Page
-  |             |
-PostgreSQL     Redis/RQ
-```
+The request path is ALB/Ingress → Service `:8080` → unprivileged Nginx `:8080` → Gunicorn `:8000` → Django / Status-Page. Persistent application state remains outside Kubernetes in managed PostgreSQL and Redis services.
 
 The application runs with two web replicas. Background work uses RQ workers, while the RQ scheduler is a singleton with `Recreate` strategy to avoid overlapping schedulers during rollout.
 
@@ -131,31 +117,9 @@ Redis uses TLS. RDS credentials are not emitted as plaintext Terraform outputs.
 
 ## Security Event Architecture
 
-```text
-WAF BlockedRequests metric
-    |
-CloudWatch Alarm
-    |
-EventBridge
-    |
-SQS security-events
-    | \
-    |  `--> DLQ after repeated failure
-    v
-AEGIS Analyzer Pod
-    |
-WAF enrichment
-    |
-Amazon Bedrock Nova Pro
-    |
-JSON parse + schema/semantic validation
-    |
-Conditional DynamoDB write
-    |
-ACK SQS message
-```
+The authoritative security-flow visual is [`21-aegis-security-human-decision.svg`](diagrams/21-aegis-security-human-decision.svg).
 
-The queue decouples detection transport from analysis. Analyzer message visibility is extended while analysis runs, and ACK/delete occurs only after successful persistence.
+The queue decouples detection transport from analysis. Analyzer message visibility is extended while analysis runs, and ACK/delete occurs only after successful persistence. Repeatedly failing messages reach the SQS dead-letter queue only through normal retry exhaustion.
 
 DynamoDB uses `incident_id` as the key, conditional writes for idempotency, encryption, and point-in-time recovery.
 
@@ -173,11 +137,7 @@ The native AEGIS plugin exposes staff-only analyst views for DynamoDB findings.
 
 A reviewer can mark a finding `CORRECT` or `INCORRECT`, optionally supply a corrected classification, and add a note. Updates are conditional on the item still being in `PENDING_REVIEW` state.
 
-A separate metrics script publishes human-verified quality statistics to:
-
-```text
-AEGIS/AIQuality
-```
+A separate metrics script publishes human-verified quality statistics to the `AEGIS/AIQuality` CloudWatch namespace.
 
 Small samples are labeled `EARLY_SAMPLE`. This is measured human feedback, not reinforcement learning and not automatic retraining.
 
@@ -185,26 +145,7 @@ Small samples are labeled `EARLY_SAMPLE`. This is measured human feedback, not r
 
 ## CI/CD and GitOps Architecture
 
-```text
-Git commit
-   |
-GitHub Actions CI
-   |
-   +--> source validation
-   +--> container build
-   +--> Trivy report + CRITICAL gate
-   +--> CycloneDX SBOM
-   +--> immutable ECR image
-   |
-   +--> protected GitOps digest promotion
-            |
-       reviewed pull request
-            |
-            v
-          Argo CD
-            |
-        reconcile EKS
-```
+The authoritative delivery visual is [`22-aegis-secure-cicd-gitops.svg`](diagrams/22-aegis-secure-cicd-gitops.svg).
 
 GitHub authenticates to AWS through OIDC. The Status-Page CI role can deliver to ECR but has no EKS deployment permission.
 
@@ -217,6 +158,8 @@ Terraform CI is validation-only and checks the authoritative `terraform/environm
 ---
 
 ## Observability Architecture
+
+The authoritative resilience and observability visual is [`23-aegis-resilience-observability.svg`](diagrams/23-aegis-resilience-observability.svg).
 
 AEGIS uses two complementary observability planes.
 
@@ -258,11 +201,7 @@ Prometheus/Grafana and CloudWatch therefore complement rather than duplicate eac
 
 ## DNS Automation Boundary
 
-The implemented public DNS provider is Dynu for:
-
-```text
-app.aegis-project.ddnsfree.com
-```
+The implemented public DNS provider is Dynu for `app.aegis-project.ddnsfree.com`.
 
 Route 53 is not part of the implemented architecture.
 
@@ -283,9 +222,9 @@ AEGIS does **not** claim active automated Dynu mutation in the accepted state.
 
 ---
 
-## Focused Architecture Views
+## Engineering Diagram Sources
 
-The final Mermaid diagram sources are under [`docs/diagrams/`](diagrams/README.md):
+The rendered SVGs are the primary portfolio views. Detailed editable Mermaid sources remain under [`docs/diagrams/`](diagrams/README.md):
 
 1. `10-final-platform.mmd` — high-level platform;
 2. `11-ci-cd-gitops.mmd` — software delivery;
@@ -294,7 +233,7 @@ The final Mermaid diagram sources are under [`docs/diagrams/`](diagrams/README.m
 5. `14-identity-trust.mmd` — IAM and trust boundaries;
 6. `15-observability.mmd` — Kubernetes and AWS observability planes.
 
-The older PNG diagrams are retained as historical Phase 1 evidence and are explicitly labeled as such.
+The Mermaid files are engineering sources and should not be used as the primary recruiter-facing rendering when an authoritative SVG exists.
 
 ---
 
@@ -302,11 +241,7 @@ The older PNG diagrams are retained as historical Phase 1 evidence and are expli
 
 The active source tree retains only the EKS-oriented implementation. The superseded EC2 environment and Ansible roles remain auditable in Git history, while labeled screenshots and diagrams preserve project-evolution evidence.
 
-The authoritative final application desired state is under:
-
-```text
-gitops/eks-dev/
-```
+The authoritative final application desired state is under `gitops/eks-dev/`.
 
 Historical EC2 documents/diagrams must not be used to describe the current runtime.
 

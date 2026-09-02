@@ -4,7 +4,7 @@ This folder contains the **authoritative final EKS architecture views**, their e
 
 ## Portfolio architecture views — authoritative
 
-These rendered SVG diagrams are the primary visual architecture set used by the repository README:
+These rendered SVG diagrams are the primary visual architecture set used by the repository README and portfolio-facing documentation:
 
 | Diagram | Architectural question |
 |---|---|
@@ -13,7 +13,10 @@ These rendered SVG diagrams are the primary visual architecture set used by the 
 | [`22-aegis-secure-cicd-gitops.svg`](22-aegis-secure-cicd-gitops.svg) | How does source become an immutable artifact and reach EKS without granting CI direct cluster deployment authority? |
 | [`23-aegis-resilience-observability.svg`](23-aegis-resilience-observability.svg) | How are workloads distributed and recovered across AZs, and how is the platform observed? |
 
-The portfolio SVGs use the same clean AEGIS infographic language as the project's original architecture boards: a white presentation surface, navy/blue hierarchy, color-coded trust and service domains, rounded component cards, and explicit directional flows. They remain text-based SVGs so they stay sharp in GitHub and easy to review. The focused Mermaid sources below remain the engineering source of truth for detailed topology questions.
+The portfolio SVGs use the same clean AEGIS infographic language as the project's original architecture boards: a white presentation surface, navy/blue hierarchy, color-coded trust and service domains, rounded component cards, and explicit directional flows. They remain text-based SVGs so they stay sharp in GitHub and easy to review.
+
+> [!IMPORTANT]
+> **Presentation policy:** recruiter-facing and showcase documentation should embed the authoritative SVGs above rather than rendering the Mermaid sources directly. Mermaid remains an editable engineering representation for topology review and maintenance.
 
 ## Editable final sources
 
