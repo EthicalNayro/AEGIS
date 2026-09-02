@@ -21,6 +21,73 @@ __all__ = (
 )
 
 
+def build_public_status_summary(components, open_incidents, open_maintenances):
+    """Build a public-safe platform summary from public records only."""
+    component_statuses = [component.status for component in components]
+    incident_impacts = [incident.impact for incident in open_incidents]
+
+    if (
+        ComponentStatusChoices.MAJOR_OUTAGE in component_statuses
+        or 'critical' in incident_impacts
+    ):
+        return {
+            'key': 'major-outage',
+            'title': 'Major service disruption',
+            'summary': 'A critical service-impacting incident is under active investigation.',
+            'icon': 'mdi-alert-octagon-outline',
+        }
+    if (
+        ComponentStatusChoices.PARTIAL_OUTAGE in component_statuses
+        or 'major' in incident_impacts
+    ):
+        return {
+            'key': 'partial-outage',
+            'title': 'Partial service disruption',
+            'summary': 'Some public AEGIS services are currently impacted.',
+            'icon': 'mdi-alert-circle-outline',
+        }
+    if (
+        ComponentStatusChoices.DEGRADED_PERFORMANCE in component_statuses
+        or 'minor' in incident_impacts
+    ):
+        return {
+            'key': 'degraded',
+            'title': 'Degraded performance',
+            'summary': 'Core services remain available while performance is being investigated.',
+            'icon': 'mdi-speedometer-slow',
+        }
+    if (
+        ComponentStatusChoices.MAINTENANCE in component_statuses
+        or open_maintenances
+    ):
+        return {
+            'key': 'maintenance',
+            'title': 'Maintenance in progress',
+            'summary': 'Planned platform work is currently underway.',
+            'icon': 'mdi-wrench-clock-outline',
+        }
+    if not components:
+        return {
+            'key': 'unconfigured',
+            'title': 'Public monitoring is coming online',
+            'summary': 'No public service components have been configured yet.',
+            'icon': 'mdi-radar',
+        }
+    if ComponentStatusChoices.UNKNOWN in component_statuses:
+        return {
+            'key': 'unknown',
+            'title': 'Status verification in progress',
+            'summary': 'One or more public services are awaiting a current health signal.',
+            'icon': 'mdi-help-circle-outline',
+        }
+    return {
+        'key': 'operational',
+        'title': 'All systems operational',
+        'summary': 'All monitored public AEGIS services are operating normally.',
+        'icon': 'mdi-shield-check-outline',
+    }
+
+
 class HomeView(BaseView):
     template_name = 'home.html'
 
@@ -32,15 +99,15 @@ class HomeView(BaseView):
         ungrouped_components = Component.objects.filter(component_group=None, visibility=True)\
             .prefetch_related(Prefetch('incidents', queryset=Incident.objects.filter(visibility=True)))
 
-        open_incidents = Incident.objects.filter(
+        open_incidents = list(Incident.objects.filter(
             ~Q(status=IncidentStatusChoices.RESOLVED),
             visibility=True,
-        )
-        open_maintenances = Maintenance.objects.filter(
+        ).prefetch_related('updates', 'components'))
+        open_maintenances = list(Maintenance.objects.filter(
             ~Q(status=MaintenanceStatusChoices.SCHEDULED),
             ~Q(status=MaintenanceStatusChoices.COMPLETED),
             visibility=True,
-        )
+        ).prefetch_related('updates', 'components'))
         open_incidents_maintenances = list(chain(open_incidents, open_maintenances))
 
         upcoming_maintenances = Maintenance.objects.filter(
@@ -56,12 +123,12 @@ class HomeView(BaseView):
             status=IncidentStatusChoices.RESOLVED,
             visibility=True,
             last_updated__range=(daterange, datenow_end),
-        )
+        ).prefetch_related('updates', 'components')
         resolved_maintenances = Maintenance.objects.filter(
             status=MaintenanceStatusChoices.COMPLETED,
             visibility=True,
             last_updated__range=(daterange, datenow_end),
-        )
+        ).prefetch_related('updates', 'components')
 
         resolved_incidents_maintenances = []
 
@@ -78,11 +145,15 @@ class HomeView(BaseView):
 
             resolved_incidents_maintenances.append((date_begin[count], local_list))
 
-        components = Component.objects.all()
-        degraded_components = list(filter(lambda c: c.status == ComponentStatusChoices.DEGRADED_PERFORMANCE, components))
-        partial_components = list(filter(lambda c: c.status == ComponentStatusChoices.PARTIAL_OUTAGE, components))
-        major_components = list(filter(lambda c: c.status == ComponentStatusChoices.MAJOR_OUTAGE, components))
-        maintenance_components = list(filter(lambda c: c.status == ComponentStatusChoices.MAINTENANCE, components))
+        public_components = list(
+            Component.objects.filter(visibility=True)
+            .filter(Q(component_group=None) | Q(component_group__visibility=True))
+            .select_related('component_group')
+        )
+        degraded_components = list(filter(lambda c: c.status == ComponentStatusChoices.DEGRADED_PERFORMANCE, public_components))
+        partial_components = list(filter(lambda c: c.status == ComponentStatusChoices.PARTIAL_OUTAGE, public_components))
+        major_components = list(filter(lambda c: c.status == ComponentStatusChoices.MAJOR_OUTAGE, public_components))
+        maintenance_components = list(filter(lambda c: c.status == ComponentStatusChoices.MAINTENANCE, public_components))
 
         if len(maintenance_components) > 0:
             status = ('bg-blue-200', 'text-blue-800', 'mdi-wrench text-blue-500', _('Some systems are undergoing '
@@ -108,6 +179,29 @@ class HomeView(BaseView):
         if incident_sum == 0 and config.HIDE_HISTORY_WHEN_EMPTY:
             should_show_history = False
 
+        public_status = build_public_status_summary(
+            public_components,
+            open_incidents,
+            open_maintenances,
+        )
+        operational_count = len(list(filter(
+            lambda c: c.status == ComponentStatusChoices.OPERATIONAL,
+            public_components,
+        )))
+        impacted_count = len(public_components) - operational_count
+        latest_component_update = max(
+            (component.last_updated for component in public_components if component.last_updated),
+            default=None,
+        )
+        public_history_days = [
+            {
+                'date': date,
+                'items': items,
+                'has_events': bool(items),
+            }
+            for date, items in resolved_incidents_maintenances
+        ]
+
         return render(request, self.template_name, {
             'component_groups': component_groups,
             'ungrouped_components': ungrouped_components,
@@ -118,4 +212,12 @@ class HomeView(BaseView):
             'upcoming_maintenances': upcoming_maintenances,
             'resolved_incidents_maintenances': resolved_incidents_maintenances,
             'should_show_history': should_show_history,
+            'public_status': public_status,
+            'public_components': public_components,
+            'public_component_count': len(public_components),
+            'public_operational_count': operational_count,
+            'public_impacted_count': impacted_count,
+            'public_latest_update': latest_component_update,
+            'public_history_days': public_history_days,
+            'public_history_has_events': incident_sum > 0,
         })

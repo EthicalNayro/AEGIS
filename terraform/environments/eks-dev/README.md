@@ -1,37 +1,34 @@
-# AEGIS EKS Development Environment
+# AEGIS EKS Environment
 
-This environment contains the parallel Phase 1.1 platform modernization.
+`eks-dev` is the authoritative Terraform environment for AEGIS. It defines the AWS infrastructure used by the validated showcase platform; there is no second legacy environment in the active source tree.
 
-It does not replace or modify `terraform/environments/dev` yet.
+## Managed infrastructure
+
+- multi-AZ VPC with public, EKS control-plane, private worker/Pod, and private data subnets;
+- Amazon EKS, managed baseline nodes, Pod Identity integration, and Karpenter prerequisites;
+- RDS PostgreSQL and ElastiCache Redis with encryption and multi-AZ controls;
+- ECR, ALB/WAF integration, WAF logging, CloudWatch alarms, and dashboards;
+- EventBridge, SQS/DLQ, DynamoDB findings storage, and workload IAM roles;
+- GitHub Actions OIDC trust constrained to the delivery branch.
+
+Kubernetes workload desired state is deliberately separate under `gitops/eks-dev/`; Argo CD, not Terraform or CI, reconciles application workloads.
 
 ## Network
 
 ```text
 VPC 10.10.0.0/16
-
-AZ-A
-├── Public
-├── EKS control plane
-├── Private EKS nodes / Pods
-└── Private data
-
-AZ-B
-├── Public
-├── EKS control plane
-├── Private EKS nodes / Pods
-└── Private data
+├── AZ A: public | EKS control plane | private workers/Pods | private data
+└── AZ B: public | EKS control plane | private workers/Pods | private data
 ```
 
-Internet-facing load balancers are placed in public subnets.
+The environment defaults to one NAT Gateway for cost-controlled development. Set `single_nat_gateway = false` for one NAT Gateway per Availability Zone.
 
-EKS worker nodes and Pods are placed in private subnets.
+## Validation
 
-Dedicated small subnets are reserved for EKS control-plane ENIs.
+```bash
+terraform fmt -check -recursive ../..
+terraform init -backend=false
+terraform validate
+```
 
-RDS and ElastiCache will use isolated private data subnets.
-
-The development environment defaults to one NAT Gateway to reduce cost.
-The VPC module supports one NAT Gateway per Availability Zone for a
-higher-availability deployment.
-
-No EKS cluster or managed data service is created at this milestone.
+Infrastructure apply is an explicit operator action. GitHub Actions validates this environment but has no EKS deployment permission and does not run `terraform apply`.

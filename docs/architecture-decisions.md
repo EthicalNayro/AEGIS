@@ -297,21 +297,21 @@ The project demonstrates a real controller/provider integration without overstat
 
 ---
 
-## ADR-013 — Keep the original EC2/Ansible platform as historical evidence
+## ADR-013 — Retire superseded EC2/Ansible source after modernization
 
-**Status:** Implemented documentation boundary
+**Status:** Implemented
 
 ### Context
 
-The repository contains a meaningful earlier phase that demonstrates Terraform networking, private hosts, Ansible configuration, PostgreSQL/Redis setup, and Nginx/Gunicorn deployment.
+The project passed through a meaningful earlier phase that demonstrated Terraform networking, private hosts, Ansible configuration, PostgreSQL/Redis setup, and Nginx/Gunicorn deployment. After the EKS architecture became authoritative, keeping executable legacy infrastructure beside current source created ambiguity and unnecessary maintenance surface.
 
 ### Decision
 
-The EC2/Ansible material remains in the repository as **project-evolution evidence**, while `terraform/environments/eks-dev` and `gitops/eks-dev` represent the final showcase architecture.
+Remove the superseded EC2 Terraform environment, host-oriented modules, Ansible roles, and unreferenced demo manifests from the active tree. Preserve evolution through Git history, labeled screenshots, and historical architecture diagrams. `terraform/environments/eks-dev` and `gitops/eks-dev` are the only current infrastructure and application desired-state paths.
 
 ### Consequences
 
-Recruiters/reviewers can see architectural progression without confusing historical resources for the current production-style runtime. Historical documents and diagrams must be labeled accordingly.
+The repository presents one unambiguous deployable architecture and a smaller maintenance/security surface. Reviewers can still audit progression in Git history and the labeled evidence set without mistaking retired code for supported runtime configuration.
 
 ---
 
@@ -325,10 +325,9 @@ An earlier design proposed approval-gated Terraform apply through GitHub Actions
 
 ### Decision
 
-Terraform CI performs formatting, initialization without backend state, and validation for both:
+Terraform CI performs formatting, initialization without backend state, and validation for:
 
 ```text
-terraform/environments/dev
 terraform/environments/eks-dev
 ```
 

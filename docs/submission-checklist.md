@@ -8,7 +8,6 @@ Use this checklist before presenting or submitting AEGIS.
 
 - [x] final acceptance gate completed: `AEGIS TECHNICAL VALIDATION: COMPLETE (12 checks passed)`
 - [x] Terraform `fmt` / `validate` passed for `eks-dev`
-- [x] Ansible syntax validation passed
 - [x] Python source compilation passed
 - [x] `gitops/eks-dev` renders successfully
 - [x] Kubernetes client dry-run passed
@@ -51,9 +50,8 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check runtime 
 - [x] local Terraform state/plans ignored
 - [x] editor swap/backup artifacts ignored
 - [x] local static-generation scratch artifacts ignored explicitly
-- [x] database password-handling Ansible tasks use `no_log: true`
 - [x] active third-party GitHub Actions are pinned by commit SHA
-- [x] Terraform CI validates both `dev` and `eks-dev`
+- [x] Terraform CI validates the authoritative `eks-dev` environment
 
 ---
 

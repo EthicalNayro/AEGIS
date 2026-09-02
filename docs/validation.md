@@ -46,8 +46,7 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact scope and interpr
 | Area | Status |
 |---|---|
 | Terraform `eks-dev` formatting / validation | ✅ validated |
-| Terraform CI for both `dev` and `eks-dev` | ✅ configured with pinned Actions |
-| Ansible syntax / historical Phase 1 automation | ✅ validated |
+| Terraform CI for the authoritative `eks-dev` environment | ✅ configured with pinned Actions |
 | Python source compilation / tests | ✅ validated |
 | Kustomize render | ✅ validated |
 | Kubernetes client dry-run | ✅ validated |
@@ -94,7 +93,7 @@ terraform -chdir=terraform/environments/eks-dev fmt -check -recursive
 terraform -chdir=terraform/environments/eks-dev validate
 ```
 
-Terraform CI additionally validates both the historical `dev` environment and the final `eks-dev` environment. Third-party CI Actions are pinned to exact commit SHAs.
+Terraform CI validates the authoritative `eks-dev` environment. Third-party CI Actions are pinned to exact commit SHAs; the retired EC2-era `dev` environment remains available only through Git history.
 
 Terraform state, plan artifacts, variable files, credentials, editor artifacts, generated Python caches, and explicitly identified local static-generation scratch files remain excluded from source control.
 

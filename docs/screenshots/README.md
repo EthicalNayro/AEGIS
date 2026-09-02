@@ -6,6 +6,8 @@ The images are evidence of specific validation milestones; they are not intended
 
 ## Phase 1 — Platform Foundation
 
+> Historical evidence only. The superseded EC2/Ansible implementation is available through Git history, not the active source tree.
+
 | # | Evidence |
 |---|---|
 | 01 | Local tooling prerequisites |

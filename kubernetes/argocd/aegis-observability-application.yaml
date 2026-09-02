@@ -16,13 +16,13 @@ spec:
           - $values/kubernetes/observability/kube-prometheus-stack-values.yaml
 
     - repoURL: https://github.com/EthicalNayro/AEGIS.git
-      targetRevision: phase-1-1/platform-modernization
+      targetRevision: main
       ref: values
 
     # AEGIS-owned observability resources such as custom Grafana dashboards.
     # Keeping them in Git makes dashboards reproducible and self-healing.
     - repoURL: https://github.com/EthicalNayro/AEGIS.git
-      targetRevision: phase-1-1/platform-modernization
+      targetRevision: main
       path: kubernetes/observability/manifests
 
   destination:

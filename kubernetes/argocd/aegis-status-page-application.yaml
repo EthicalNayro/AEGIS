@@ -9,7 +9,7 @@ spec:
 
   source:
     repoURL: https://github.com/EthicalNayro/AEGIS.git
-    targetRevision: phase-1-1/platform-modernization
+    targetRevision: main
     path: gitops/eks-dev
 
   destination:
