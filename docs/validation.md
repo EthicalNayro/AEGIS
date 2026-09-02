@@ -46,8 +46,7 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact scope and interpr
 | Area | Status |
 |---|---|
 | Terraform `eks-dev` formatting / validation | ✅ validated |
-| Terraform CI for both `dev` and `eks-dev` | ✅ configured with pinned Actions |
-| Ansible syntax / historical Phase 1 automation | ✅ validated |
+| Terraform CI for the authoritative `eks-dev` environment | ✅ configured with pinned Actions |
 | Python source compilation / tests | ✅ validated |
 | Kustomize render | ✅ validated |
 | Kubernetes client dry-run | ✅ validated |

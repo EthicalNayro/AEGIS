@@ -46,8 +46,8 @@ python -m compileall status-page/statuspage/aegis_review
 
 # Terraform
 terraform fmt -check -recursive terraform
-terraform -chdir=terraform/environments/dev init -backend=false
-terraform -chdir=terraform/environments/dev validate
+terraform -chdir=terraform/environments/eks-dev init -backend=false
+terraform -chdir=terraform/environments/eks-dev validate
 
 # GitOps render
 kubectl kustomize gitops/eks-dev

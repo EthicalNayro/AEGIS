@@ -1,7 +1,7 @@
 # Networking
 
 > [!NOTE]
-> This document describes the **final `eks-dev` showcase network**. The original EC2/Ansible network is retained only as project-evolution evidence under `terraform/environments/dev` and the historical PNG diagrams.
+> This document describes the **`eks-dev` showcase network**, which is the only infrastructure environment retained in the current source tree. Earlier EC2/Ansible work remains visible through Git history and historical evidence images.
 
 ## Current VPC
 

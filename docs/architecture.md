@@ -2,12 +2,14 @@
 
 ## Scope
 
-AEGIS contains two architectural generations:
+AEGIS evolved through two architectural generations:
 
-1. the original EC2/Ansible foundation and CloudTrail processing work;
-2. the validated `eks-dev` modernization, which is the **final showcase architecture**.
+1. an original EC2/Ansible foundation and CloudTrail processing phase;
+2. the validated `eks-dev` modernization, which is the **current showcase architecture**.
 
 The modern platform keeps persistent data outside Kubernetes, uses GitOps for workload delivery, adds WAF-driven security telemetry and AI-assisted analysis, requires human review, and uses Prometheus/Grafana plus CloudWatch as complementary observability planes.
+
+Superseded host-automation and EC2 infrastructure source was retired from the active tree after modernization. Git history and labeled evidence images preserve the earlier phase.
 
 The final accepted state passed [`scripts/final-acceptance.sh`](../scripts/final-acceptance.sh) with **12/12 checks**.
 
@@ -208,7 +210,7 @@ Argo CD is the Kubernetes CD authority. `AppProject` boundaries constrain source
 
 The CI workflow refreshes the remote branch before modifying desired state. Newer non-GitOps source causes a stale workflow to fail closed instead of overwriting it.
 
-Terraform CI is validation-only and checks both `terraform/environments/dev` and `terraform/environments/eks-dev`; the repository does not claim an automated approval-gated Terraform apply workflow.
+Terraform CI is validation-only and checks the authoritative `terraform/environments/eks-dev` environment; the repository does not claim an automated approval-gated Terraform apply workflow.
 
 ---
 
@@ -294,9 +296,9 @@ The older PNG diagrams are retained as historical Phase 1 evidence and are expli
 
 ---
 
-## Original Architecture Retained for History
+## Historical Architecture Boundary
 
-The repository retains the original EC2-based `dev` environment and Ansible roles as project-evolution evidence.
+The active source tree retains only the EKS-oriented implementation. The superseded EC2 environment and Ansible roles remain auditable in Git history, while labeled screenshots and diagrams preserve project-evolution evidence.
 
 The authoritative final application desired state is under:
 
@@ -304,7 +306,7 @@ The authoritative final application desired state is under:
 gitops/eks-dev/
 ```
 
-Historical EC2 documents/diagrams must not be used to describe the final runtime.
+Historical EC2 documents/diagrams must not be used to describe the current runtime.
 
 ---
 

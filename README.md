@@ -7,8 +7,8 @@
 AEGIS turns AWS edge telemetry into structured, reviewable security findings while operating a hardened Status-Page workload on Amazon EKS.
 
 [![Status-Page Secure CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/status-page-ci.yml/badge.svg?branch=phase-1-1%2Fplatform-modernization)](https://github.com/EthicalNayro/AEGIS/actions/workflows/status-page-ci.yml)
-[![AEGIS Python CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/aegis-ci.yml/badge.svg?branch=main)](https://github.com/EthicalNayro/AEGIS/actions/workflows/aegis-ci.yml)
-[![Terraform CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/terraform-ci.yml/badge.svg?branch=main)](https://github.com/EthicalNayro/AEGIS/actions/workflows/terraform-ci.yml)
+[![AEGIS Python CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/aegis-ci.yml/badge.svg?branch=phase-1-1%2Fplatform-modernization)](https://github.com/EthicalNayro/AEGIS/actions/workflows/aegis-ci.yml)
+[![Terraform CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/terraform-ci.yml/badge.svg?branch=phase-1-1%2Fplatform-modernization)](https://github.com/EthicalNayro/AEGIS/actions/workflows/terraform-ci.yml)
 ![AWS](https://img.shields.io/badge/AWS-EKS%20%7C%20WAF%20%7C%20Bedrock-FF9900?logo=amazonwebservices&logoColor=white)
 ![GitOps](https://img.shields.io/badge/GitOps-Argo%20CD-EF7B4D?logo=argo&logoColor=white)
 ![Security](https://img.shields.io/badge/security-human--in--the--loop-10B981)
@@ -222,8 +222,7 @@ See the [final acceptance proof](docs/final-acceptance.md), complete [validation
 ```text
 .
 ├── .github/workflows/             # CI and secure artifact delivery
-├── aegis/                         # original CloudTrail processing core
-├── ansible/                       # original host automation / Phase 1 history
+├── aegis/                         # tested CloudTrail security-processing core
 ├── gitops/eks-dev/                # authoritative application desired state
 ├── kubernetes/
 │   ├── argocd/                    # constrained GitOps applications/projects
@@ -233,9 +232,8 @@ See the [final acceptance proof](docs/final-acceptance.md), complete [validation
 ├── scripts/                       # validation, review, and AI-quality tooling
 ├── status-page/                   # application source + isolated AEGIS plugin
 ├── terraform/
-│   ├── environments/dev/          # original EC2 foundation
-│   ├── environments/eks-dev/      # final EKS environment
-│   └── modules/                   # reusable AWS infrastructure modules
+│   ├── environments/eks-dev/      # authoritative EKS environment
+│   └── modules/                   # modules consumed by eks-dev
 └── docs/                          # architecture, security, operations, evidence
 ```
 
@@ -270,7 +268,7 @@ The repository states its boundaries explicitly:
 | [Safety enhancements](docs/architecture-safety-enhancements.md) | failure modes and the controls that address them |
 | [Architecture decisions](docs/architecture-decisions.md) | implemented design choices and trade-offs |
 | [Disaster recovery](docs/disaster-recovery.md) | current recovery posture and unvalidated gaps |
-| [Project evolution](docs/phase-1-1-platform-modernization.md) | migration from the original EC2 design to EKS |
+| [Project evolution](docs/phase-1-1-platform-modernization.md) | migration from the original EC2 design to the current EKS platform |
 
 ## Contributing and security
 

@@ -43,7 +43,7 @@ GitOps path: gitops/eks-dev
 Deployment branch: phase-1-1/platform-modernization
 ```
 
-The original `terraform/environments/dev` and Ansible-based EC2 deployment remain as historical project phases, not as the final Status-Page runtime.
+The active tree contains only the EKS-oriented deployment. The superseded EC2/Ansible phase remains available through Git history and labeled historical evidence.
 
 ---
 
@@ -51,10 +51,9 @@ The original `terraform/environments/dev` and Ansible-based EC2 deployment remai
 
 Terraform owns the AWS infrastructure for `eks-dev`, including the VPC/EKS foundation, managed data services, ECR, WAF/observability resources, event queues, DynamoDB findings storage, and workload IAM roles.
 
-The repository CI validates both Terraform environments:
+The repository CI validates the authoritative Terraform environment:
 
 ```text
-terraform/environments/dev
 terraform/environments/eks-dev
 ```
 
@@ -328,8 +327,6 @@ Application deployment is therefore reproducible independently of a developer wo
 
 ---
 
-## Original Ansible Deployment
+## Retired Host-based Deployment
 
-Ansible remains part of the repository and demonstrates host configuration for the earlier EC2 foundation. It is still syntax-validated and secret-bearing database tasks use `no_log: true`.
-
-It is no longer the final application delivery mechanism for `eks-dev`.
+The earlier EC2/Ansible deployment was retired from the active source tree after the EKS migration. Git history and labeled screenshots retain the engineering trail, while this guide intentionally documents only the supported `eks-dev` delivery path.

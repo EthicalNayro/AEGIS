@@ -130,4 +130,4 @@ Until that exercise exists, the accurate claim is **multi-AZ resilience plus dec
 
 ## Historical Phase 1 Note
 
-The original EC2/Ansible architecture had materially weaker recovery characteristics, including a single NAT path and host-managed PostgreSQL/Redis. Those files remain as project-evolution evidence and should not be used to describe the final EKS runtime.
+The original EC2/Ansible architecture had materially weaker recovery characteristics, including a single NAT path and host-managed PostgreSQL/Redis. Its source was retired after the EKS migration; Git history and labeled evidence images preserve that project evolution without presenting obsolete infrastructure as recoverable current state.

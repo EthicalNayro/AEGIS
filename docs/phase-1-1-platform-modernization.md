@@ -23,6 +23,8 @@ The original Phase 1 foundation proved:
 
 The modernization keeps those application responsibilities but replaces the final runtime model with Kubernetes and managed AWS services.
 
+After the migration was accepted, the superseded EC2/Ansible implementation was removed from the active source tree. Its evolution remains auditable in Git history and the labeled historical evidence set.
+
 ---
 
 ## Implemented Architecture

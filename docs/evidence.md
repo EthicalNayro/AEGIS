@@ -243,7 +243,7 @@ Screenshot 93 is still useful presentation evidence and should show the exact in
 
 Repository validation covers:
 
-- Terraform source for both historical and final environments;
+- Terraform source for the authoritative `eks-dev` environment;
 - Kubernetes/GitOps source;
 - analyzer and human-review tooling;
 - Status-Page plugin/UI source;
@@ -259,6 +259,6 @@ Repository validation covers:
 
 ## Historical Evidence
 
-Earlier screenshots and the original PNG architecture diagrams remain valuable proof of project evolution: Terraform networking, NAT/private subnet validation, Ansible, PostgreSQL/Redis setup, Nginx/Gunicorn, and the original EC2 deployment.
+Earlier screenshots and the original PNG architecture diagrams remain valuable proof of project evolution: Terraform networking, NAT/private subnet validation, Ansible, PostgreSQL/Redis setup, Nginx/Gunicorn, and the original EC2 deployment. The superseded executable source is preserved in Git history rather than the active tree.
 
 They must be presented as **Phase 1 evolution evidence**, not as the final EKS runtime architecture. See [`diagrams/README.md`](diagrams/README.md) for the diagram boundary.
