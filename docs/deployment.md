@@ -107,7 +107,7 @@ The secure Status-Page workflow performs two major jobs.
 - resolves the immutable ECR digest;
 - safely synchronizes the GitOps branch;
 - updates the GitOps image digest;
-- commits the desired-state change back to Git.
+- packages the desired-state change as a promotion artifact for a protected pull request.
 
 ---
 
@@ -159,7 +159,7 @@ The final acceptance gate compares the GitOps digest with all application-image 
 
 ## Safe GitOps Synchronization
 
-A workflow can become stale while it is building. AEGIS protects against that race before mutating desired state.
+A workflow can become stale while it is building. AEGIS protects against that race before preparing a desired-state promotion.
 
 Before updating `gitops/eks-dev/kustomization.yaml`, CI fetches the current remote branch and inspects commits newer than the workflow source revision.
 
@@ -167,6 +167,8 @@ Before updating `gitops/eks-dev/kustomization.yaml`, CI fetches the current remo
 - If newer non-GitOps source exists, the workflow fails closed.
 
 This protection was exercised by a real workflow run: a stale delivery was rejected after newer source advanced the branch.
+
+The delivery job never bypasses `main` branch protection. When the resolved digest differs from Git, CI uploads the updated `kustomization.yaml` and a focused patch as a release artifact. The immutable digest is promoted through a pull request; only after that reviewed Git change lands can Argo CD reconcile it to EKS.
 
 ---
 

@@ -196,7 +196,9 @@ GitHub Actions CI
    +--> CycloneDX SBOM
    +--> immutable ECR image
    |
-   +--> guarded GitOps digest update
+   +--> protected GitOps digest promotion
+            |
+       reviewed pull request
             |
             v
           Argo CD
@@ -208,7 +210,7 @@ GitHub authenticates to AWS through OIDC. The Status-Page CI role can deliver to
 
 Argo CD is the Kubernetes CD authority. `AppProject` boundaries constrain sources, destinations, and resource kinds. Automated sync, pruning, self-heal, `PruneLast`, `ApplyOutOfSyncOnly`, and server-side apply enforce declared state.
 
-The CI workflow refreshes the remote branch before modifying desired state. Newer non-GitOps source causes a stale workflow to fail closed instead of overwriting it.
+The CI workflow refreshes the remote branch before preparing desired state. Newer non-GitOps source causes a stale workflow to fail closed. CI uploads a focused promotion artifact and never bypasses `main`; the digest reaches Argo CD only through a protected pull request.
 
 Terraform CI is validation-only and checks the authoritative `terraform/environments/eks-dev` environment; the repository does not claim an automated approval-gated Terraform apply workflow.
 
