@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document describes the **final EKS-based showcase state**, not the original Phase 1 EC2 deployment.
+This document describes the supported EKS-based showcase state.
 
 AEGIS has meaningful recovery building blocks and multi-AZ resilience, but it does **not** claim a fully exercised disaster-recovery program. In particular, there is no validated cross-region recovery, no automated full-environment restore workflow, and no formal restore-drill evidence.
 
@@ -127,7 +127,3 @@ A future formal DR exercise should prove, in order:
 8. record elapsed recovery time and data-loss window.
 
 Until that exercise exists, the accurate claim is **multi-AZ resilience plus declarative rebuild capability**, not fully validated disaster recovery.
-
-## Historical Phase 1 Note
-
-The original EC2/Ansible architecture had materially weaker recovery characteristics, including a single NAT path and host-managed PostgreSQL/Redis. Its source was retired after the EKS migration; Git history and labeled evidence images preserve that project evolution without presenting obsolete infrastructure as recoverable current state.

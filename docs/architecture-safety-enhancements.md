@@ -263,7 +263,7 @@ This behavior was validated by a real stale workflow rejection.
 
 **Risk:** duplicate production manifests drift independently.
 
-**Control:** `gitops/eks-dev/` is authoritative; duplicate legacy production manifests were retired.
+**Control:** `gitops/eks-dev/` is authoritative and no competing production manifest source is maintained.
 
 ### Immutable runtime verification
 
@@ -342,11 +342,11 @@ This behavior was validated by a real stale workflow rejection.
 
 The repository excludes Terraform state/plans, local variable files, editor files, environment files, keys, virtual environments, Python caches, and identified local static-generation scratch artifacts.
 
-### Historical/current architecture separation
+### Single authoritative architecture set
 
-**Risk:** Phase 1 EC2 documents/diagrams are mistaken for the final architecture.
+**Risk:** duplicate or stale diagrams create ambiguity about the deployed platform.
 
-**Control:** superseded EC2/Ansible source is absent from the active tree; final documentation labels the remaining historical evidence and provides a dedicated EKS diagram set.
+**Control:** documentation embeds one curated four-diagram set aligned with the supported `eks-dev` state.
 
 ### Reproducible final acceptance gate
 

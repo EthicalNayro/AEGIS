@@ -2,14 +2,7 @@
 
 ## Scope
 
-AEGIS evolved through two architectural generations:
-
-1. an original EC2/Ansible foundation and CloudTrail processing phase;
-2. the validated `eks-dev` modernization, which is the **current showcase architecture**.
-
-The modern platform keeps persistent data outside Kubernetes, uses GitOps for workload delivery, adds WAF-driven security telemetry and AI-assisted analysis, requires human review, and uses Prometheus/Grafana plus CloudWatch as complementary observability planes.
-
-Superseded host-automation and EC2 infrastructure source was retired from the active tree after modernization. Git history and labeled evidence images preserve the earlier phase.
+This document describes the validated `eks-dev` platform: private multi-AZ EKS workers, managed persistent data, GitOps-owned delivery, WAF-driven telemetry, advisory AI analysis, protected human review, and complementary Prometheus/Grafana and CloudWatch observability.
 
 The final accepted state passed [`scripts/final-acceptance.sh`](../scripts/final-acceptance.sh) with **12/12 checks**.
 
@@ -21,25 +14,25 @@ The rendered portfolio diagrams below are the primary visual representation of t
 
 ### Final platform architecture
 
-![AEGIS final platform architecture](diagrams/20-aegis-final-platform.svg)
+![AEGIS final platform architecture](diagrams/20-aegis-final-platform.png)
 
 The accepted topology separates the public edge, private Amazon EKS runtime, managed data services, AI/security services, GitOps control plane, and deliberate DNS automation boundary.
 
 ### Security signal to human decision
 
-![AEGIS security signal to human decision architecture](diagrams/21-aegis-security-human-decision.svg)
+![AEGIS security signal to human decision architecture](diagrams/21-aegis-security-human-decision.png)
 
 A blocked-request signal is routed through CloudWatch, EventBridge and SQS, analyzed by the AEGIS analyzer with Amazon Bedrock, validated before persistence, and finalized only through protected staff review.
 
 ### Secure CI/CD and GitOps
 
-![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.svg)
+![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.png)
 
 CI validates and publishes an immutable artifact; Git declares the desired digest; Argo CD owns cluster reconciliation. The GitHub CI role has no direct EKS deployment authority.
 
 ### Multi-AZ resilience and observability
 
-![AEGIS multi-AZ resilience and observability architecture](diagrams/23-aegis-resilience-observability.svg)
+![AEGIS multi-AZ resilience and observability architecture](diagrams/23-aegis-resilience-observability.png)
 
 The runtime uses multiple Ready replicas across Availability Zones with probes, topology spread, disruption budgets, Karpenter recovery capacity, managed data services, and complementary Prometheus/Grafana and CloudWatch observability.
 
@@ -117,7 +110,7 @@ Redis uses TLS. RDS credentials are not emitted as plaintext Terraform outputs.
 
 ## Security Event Architecture
 
-The authoritative security-flow visual is [`21-aegis-security-human-decision.svg`](diagrams/21-aegis-security-human-decision.svg).
+The authoritative security-flow visual is [`21-aegis-security-human-decision.png`](diagrams/21-aegis-security-human-decision.png).
 
 The queue decouples detection transport from analysis. Analyzer message visibility is extended while analysis runs, and ACK/delete occurs only after successful persistence. Repeatedly failing messages reach the SQS dead-letter queue only through normal retry exhaustion.
 
@@ -145,7 +138,7 @@ Small samples are labeled `EARLY_SAMPLE`. This is measured human feedback, not r
 
 ## CI/CD and GitOps Architecture
 
-The authoritative delivery visual is [`22-aegis-secure-cicd-gitops.svg`](diagrams/22-aegis-secure-cicd-gitops.svg).
+The authoritative delivery visual is [`22-aegis-secure-cicd-gitops.png`](diagrams/22-aegis-secure-cicd-gitops.png).
 
 GitHub authenticates to AWS through OIDC. The Status-Page CI role can deliver to ECR but has no EKS deployment permission.
 
@@ -159,7 +152,7 @@ Terraform CI is validation-only and checks the authoritative `terraform/environm
 
 ## Observability Architecture
 
-The authoritative resilience and observability visual is [`23-aegis-resilience-observability.svg`](diagrams/23-aegis-resilience-observability.svg).
+The authoritative resilience and observability visual is [`23-aegis-resilience-observability.png`](diagrams/23-aegis-resilience-observability.png).
 
 AEGIS uses two complementary observability planes.
 
@@ -222,28 +215,9 @@ AEGIS does **not** claim active automated Dynu mutation in the accepted state.
 
 ---
 
-## Engineering Diagram Sources
+## Authoritative Diagram Set
 
-The rendered SVGs are the primary portfolio views. Detailed editable Mermaid sources remain under [`docs/diagrams/`](diagrams/README.md):
-
-1. `10-final-platform.mmd` — high-level platform;
-2. `11-ci-cd-gitops.mmd` — software delivery;
-3. `12-security-event-pipeline.mmd` — security processing;
-4. `13-kubernetes-ha.mmd` — workload topology / resilience;
-5. `14-identity-trust.mmd` — IAM and trust boundaries;
-6. `15-observability.mmd` — Kubernetes and AWS observability planes.
-
-The Mermaid files are engineering sources and should not be used as the primary recruiter-facing rendering when an authoritative SVG exists.
-
----
-
-## Historical Architecture Boundary
-
-The active source tree retains only the EKS-oriented implementation. The superseded EC2 environment and Ansible roles remain auditable in Git history, while labeled screenshots and diagrams preserve project-evolution evidence.
-
-The authoritative final application desired state is under `gitops/eks-dev/`.
-
-Historical EC2 documents/diagrams must not be used to describe the current runtime.
+The four production-state PNG views under [`docs/diagrams/`](diagrams/README.md) are the sole architecture presentation set. The authoritative application desired state remains under `gitops/eks-dev/`.
 
 ---
 

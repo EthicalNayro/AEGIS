@@ -31,12 +31,12 @@ This means the **runtime is technically accepted**. Any screenshot marked pendin
 | Evidence | Status | What it proves |
 |---|---|---|
 | [`83-aegis-argocd-gitops-synced-healthy.png`](screenshots/83-aegis-argocd-gitops-synced-healthy.png) | ✅ captured | Argo CD reached `Synced / Healthy` during the application milestone |
-| `84` drift/self-heal evidence | ✅ historical | Argo CD reconciled runtime drift back to Git desired state |
+| `84` drift/self-heal evidence | ✅ validated | Argo CD reconciled runtime drift back to Git desired state |
 | [`85-aegis-secure-ci-oidc-ecr-gitops.png`](screenshots/85-aegis-secure-ci-oidc-ecr-gitops.png) | ✅ captured | OIDC, ECR delivery, security gates, and GitOps digest update |
 | [`86-aegis-argocd-presync-database-migration.png`](screenshots/86-aegis-argocd-presync-database-migration.png) | ✅ captured | database migration succeeded as Argo CD `PreSync` |
 | [`87-aegis-sbom-idempotent-ci-rerun.png`](screenshots/87-aegis-sbom-idempotent-ci-rerun.png) | ✅ captured | CycloneDX SBOM and safe/idempotent CI rerun behavior |
 | [`88-aegis-multistage-runtime-hardening.png`](screenshots/88-aegis-multistage-runtime-hardening.png) | ✅ captured | multi-stage runtime image and healthy rollout |
-| [`89-aegis-final-gitops-runtime-verification.png`](screenshots/89-aegis-final-gitops-runtime-verification.png) | ✅ captured | historical GitOps/runtime acceptance before later observability/DNS additions |
+| [`89-aegis-final-gitops-runtime-verification.png`](screenshots/89-aegis-final-gitops-runtime-verification.png) | ✅ captured | GitOps/runtime acceptance captured before the observability and DNS checks were added |
 | [`90-aegis-prometheus-grafana-gitops-synced.png`](screenshots/90-aegis-prometheus-grafana-gitops-synced.png) | ✅ captured | observability application reached GitOps `Synced / Healthy` |
 | [`91-aegis-grafana-kubernetes-observability.png`](screenshots/91-aegis-grafana-kubernetes-observability.png) | ✅ captured | live Kubernetes telemetry for `aegis-system` |
 | `92-aegis-grafana-platform-health-dashboard.png` | ⏳ file copy pending | final corrected AEGIS Platform Health dashboard |
@@ -254,11 +254,3 @@ Repository validation covers:
 - generated local scratch artifacts ignored.
 
 `gitops/eks-dev/` is the authoritative production-style Status-Page desired state.
-
----
-
-## Historical Evidence
-
-Earlier screenshots and the original PNG architecture diagrams remain valuable proof of project evolution: Terraform networking, NAT/private subnet validation, Ansible, PostgreSQL/Redis setup, Nginx/Gunicorn, and the original EC2 deployment. The superseded executable source is preserved in Git history rather than the active tree.
-
-They must be presented as **Phase 1 evolution evidence**, not as the final EKS runtime architecture. See [`diagrams/README.md`](diagrams/README.md) for the diagram boundary.

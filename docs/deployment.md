@@ -4,11 +4,11 @@
 
 The final AEGIS delivery model separates **infrastructure validation**, **application CI**, and **Kubernetes CD**.
 
-![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.svg)
+![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.png)
 
 GitHub Actions does not deploy the Status-Page directly with `kubectl` and the Status-Page CI role has no EKS deployment permission. Argo CD continuously reconciles Kubernetes state from reviewed Git desired state.
 
-The rendered SVG is the portfolio-facing delivery view. The editable engineering source remains [`diagrams/11-ci-cd-gitops.mmd`](diagrams/11-ci-cd-gitops.mmd).
+The diagram is the authoritative portfolio-facing delivery view.
 
 ---
 
@@ -25,7 +25,7 @@ GitOps path: gitops/eks-dev
 Deployment branch: main
 ```
 
-The active tree contains only the EKS-oriented deployment. The superseded EC2/Ansible phase remains available through Git history and labeled historical evidence.
+The active tree contains only the supported EKS-oriented deployment.
 
 ---
 
@@ -142,7 +142,7 @@ The Application enables:
 
 The AppProject restricts source, destination, and allowed resource kinds.
 
-`gitops/eks-dev/` is the authoritative production-style desired state. Duplicate legacy production manifests were removed from competing source-of-truth locations.
+`gitops/eks-dev/` is the sole authoritative production-style desired state; no competing workload source-of-truth is maintained.
 
 The final acceptance gate requires both `aegis-status-page` and `aegis-observability` to reach `Synced / Healthy`.
 
@@ -182,7 +182,7 @@ Sensitive runtime Secrets are intentionally not stored in the public repository.
 
 ## Public Traffic
 
-![AEGIS final platform architecture](diagrams/20-aegis-final-platform.svg)
+![AEGIS final platform architecture](diagrams/20-aegis-final-platform.png)
 
 The production request path redirects HTTP `:80` to HTTPS and serves public traffic through the Internet-facing ALB on `:443`. ACM provides TLS and AWS WAF is associated with the ALB. The ALB-class Kubernetes Ingress routes traffic to Service `:8080`, then to unprivileged Nginx, Gunicorn, and Django on private EKS workers.
 
@@ -219,7 +219,7 @@ The final gate verifies the ExternalDNS rollout and least-privilege RBAC while e
 
 ## Observability Rollout Note
 
-![AEGIS multi-AZ resilience and observability architecture](diagrams/23-aegis-resilience-observability.svg)
+![AEGIS multi-AZ resilience and observability architecture](diagrams/23-aegis-resilience-observability.png)
 
 During final observability validation, one node-exporter Pod could not schedule because its target node reached the Pod-density limit. The GitOps values were hardened with `system-cluster-critical` priority for node-exporter. After reconciliation, the observability Argo application returned to `Synced / Healthy`.
 
@@ -250,9 +250,3 @@ See [`final-acceptance.md`](final-acceptance.md) for the complete proof.
 Because the deployed artifact is identified by digest in Git, application rollback is an auditable Git operation: restore a previously validated digest in desired state and allow Argo CD to reconcile.
 
 Application deployment is therefore reproducible independently of a developer workstation.
-
----
-
-## Retired Host-based Deployment
-
-The earlier EC2/Ansible deployment was retired from the active source tree after the EKS migration. Git history and labeled screenshots retain the engineering trail, while this guide intentionally documents only the supported `eks-dev` delivery path.
