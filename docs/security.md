@@ -8,9 +8,9 @@ The final platform intentionally minimizes direct trust relationships. Public tr
 
 ### Security architecture at a glance
 
-![AEGIS final platform architecture](diagrams/20-aegis-final-platform.svg)
+![AEGIS final platform architecture](diagrams/20-aegis-final-platform.png)
 
-![AEGIS security signal to human decision architecture](diagrams/21-aegis-security-human-decision.svg)
+![AEGIS security signal to human decision architecture](diagrams/21-aegis-security-human-decision.png)
 
 The rendered SVGs are the portfolio-facing security architecture. Editable Mermaid files under [`docs/diagrams/`](diagrams/README.md) remain engineering sources only.
 
@@ -83,7 +83,7 @@ The analyzer receives only the permissions required for the security pipeline. T
 
 No long-lived application AWS access keys are stored in the repository or application image.
 
-For the detailed identity/trust engineering source, see [`diagrams/14-identity-trust.mmd`](diagrams/14-identity-trust.mmd).
+The trust boundaries are summarized in the curated [`architecture diagram set`](diagrams/README.md).
 
 ---
 
@@ -105,7 +105,7 @@ Controls include:
 
 ## Software Supply-Chain Security
 
-![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.svg)
+![AEGIS secure CI CD and GitOps architecture](diagrams/22-aegis-secure-cicd-gitops.png)
 
 The active CI workflows use third-party GitHub Actions pinned by exact commit SHA.
 
@@ -172,7 +172,7 @@ The final 12-check acceptance run proved the controller rollout, least-privilege
 
 ## Security Event Pipeline
 
-The authoritative event-processing visual is [`21-aegis-security-human-decision.svg`](diagrams/21-aegis-security-human-decision.svg).
+The authoritative event-processing visual is [`21-aegis-security-human-decision.png`](diagrams/21-aegis-security-human-decision.png).
 
 The active WAF-driven path uses CloudWatch Alarm → EventBridge → SQS → AEGIS Analyzer → Amazon Bedrock → validated DynamoDB finding → protected human review.
 

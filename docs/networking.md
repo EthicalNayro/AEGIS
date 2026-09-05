@@ -1,7 +1,7 @@
 # Networking
 
 > [!NOTE]
-> This document describes the **`eks-dev` showcase network**, which is the only infrastructure environment retained in the current source tree. Earlier EC2/Ansible work remains visible through Git history and historical evidence images.
+> This document describes the supported **`eks-dev` showcase network** and its enforced boundaries.
 
 ## Current VPC
 
@@ -109,12 +109,4 @@ Network resilience is designed around two Availability Zones:
 
 This is a **multi-AZ, single-region** architecture. AEGIS does not claim multi-region active/active networking or cross-region disaster recovery.
 
-## Historical Phase 1 Network
-
-The original project phase used a separate `10.0.0.0/16` EC2-oriented network with an application EC2 instance, PostgreSQL EC2, Redis EC2, and a single NAT Gateway. Those files and diagrams remain in the repository to demonstrate project evolution, but they are not the final runtime architecture.
-
-See:
-
-- [`architecture.md`](architecture.md) for the complete final topology;
-- [`diagrams/README.md`](diagrams/README.md) for final versus historical diagram labeling;
-- [`phase-1-1-platform-modernization.md`](phase-1-1-platform-modernization.md) for the migration story.
+See [`architecture.md`](architecture.md) for the complete topology and [`diagrams/README.md`](diagrams/README.md) for the four authoritative views.

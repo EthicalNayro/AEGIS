@@ -46,7 +46,7 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check runtime 
 - [x] Status-Page AEGIS plugin/UI committed
 - [x] human-review and AI-quality scripts committed
 - [x] observability and ExternalDNS source committed
-- [x] duplicate legacy Status-Page production manifests retired
+- [x] `gitops/eks-dev/` is the sole Status-Page production desired-state source
 - [x] local Terraform state/plans ignored
 - [x] editor swap/backup artifacts ignored
 - [x] local static-generation scratch artifacts ignored explicitly
@@ -59,7 +59,7 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check runtime 
 
 - [x] README describes EKS as current state, not future state
 - [x] architecture documentation describes private EKS workers and managed data services
-- [x] networking documentation describes VPC `10.10.0.0/16` and marks the EC2 network historical
+- [x] networking documentation describes the authoritative VPC `10.10.0.0/16` and current traffic boundaries
 - [x] disaster-recovery document reflects current Multi-AZ/PITR capabilities without claiming untested restore drills
 - [x] architecture decisions describe implemented state rather than obsolete future plans
 - [x] deployment documentation describes GitHub Actions as CI and Argo CD as Kubernetes CD
@@ -69,8 +69,8 @@ See [`final-acceptance.md`](final-acceptance.md) for the exact 12-check runtime 
 - [x] validation document records the final accepted 12-check state
 - [x] dedicated final acceptance proof records the successful gate
 - [x] Architecture Safety Enhancements include the final DNS and Pod-density resilience controls
-- [x] focused final Mermaid architecture sources are committed
-- [x] historical Phase 1 PNG diagrams are explicitly labeled non-authoritative for the final runtime
+- [x] exactly four authoritative production-state architecture diagrams are committed and embedded
+- [x] duplicate and obsolete architecture diagrams are absent from the active tree
 - [x] evidence index distinguishes runtime acceptance from screenshot packaging
 - [x] known limitations are explicit
 - [x] ExternalDNS is described accurately as deployed/validated in dry-run, not as active Dynu automation

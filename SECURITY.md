@@ -4,7 +4,7 @@ AEGIS is a security engineering project and treats responsible disclosure as par
 
 ## Supported version
 
-Security fixes target the current `main` branch. The repository contains only the current EKS-oriented implementation; superseded EC2/Ansible source remains available through Git history and is not operated as the showcase runtime.
+Security fixes target the current `main` branch and the supported `eks-dev` platform implementation.
 
 ## Reporting a vulnerability
 

@@ -93,7 +93,7 @@ terraform -chdir=terraform/environments/eks-dev fmt -check -recursive
 terraform -chdir=terraform/environments/eks-dev validate
 ```
 
-Terraform CI validates the authoritative `eks-dev` environment. Third-party CI Actions are pinned to exact commit SHAs; the retired EC2-era `dev` environment remains available only through Git history.
+Terraform CI validates only the authoritative `eks-dev` environment. Third-party CI Actions are pinned to exact commit SHAs.
 
 Terraform state, plan artifacts, variable files, credentials, editor artifacts, generated Python caches, and explicitly identified local static-generation scratch files remain excluded from source control.
 

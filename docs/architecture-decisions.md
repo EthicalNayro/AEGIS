@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-This document records the architectural decisions that define the **implemented final AEGIS showcase state**. Earlier Phase 1 / Phase 2 experiments are retained in source history and project-evolution documentation, but the statuses below describe what is actually deployed and validated now.
+This document records the architectural decisions that define the **implemented and validated AEGIS showcase state**.
 
 ---
 
@@ -56,7 +56,7 @@ Some ambiguous operations are rejected instead of guessed. This increases operat
 
 ### Context
 
-The original platform used standalone EC2 hosts managed with Ansible and systemd. That model couples deployment, restart behavior, placement, and scaling to individual servers.
+The platform requires scheduling, restart, placement, and scaling behavior that is independent of individual hosts.
 
 ### Decision
 
@@ -297,25 +297,7 @@ The project demonstrates a real controller/provider integration without overstat
 
 ---
 
-## ADR-013 — Retire superseded EC2/Ansible source after modernization
-
-**Status:** Implemented
-
-### Context
-
-The project passed through a meaningful earlier phase that demonstrated Terraform networking, private hosts, Ansible configuration, PostgreSQL/Redis setup, and Nginx/Gunicorn deployment. After the EKS architecture became authoritative, keeping executable legacy infrastructure beside current source created ambiguity and unnecessary maintenance surface.
-
-### Decision
-
-Remove the superseded EC2 Terraform environment, host-oriented modules, Ansible roles, and unreferenced demo manifests from the active tree. Preserve evolution through Git history, labeled screenshots, and historical architecture diagrams. `terraform/environments/eks-dev` and `gitops/eks-dev` are the only current infrastructure and application desired-state paths.
-
-### Consequences
-
-The repository presents one unambiguous deployable architecture and a smaller maintenance/security surface. Reviewers can still audit progression in Git history and the labeled evidence set without mistaking retired code for supported runtime configuration.
-
----
-
-## ADR-014 — Validate infrastructure code in CI; keep infrastructure apply operationally separate
+## ADR-013 — Validate infrastructure code in CI; keep infrastructure apply operationally separate
 
 **Status:** Implemented
 

@@ -7,7 +7,6 @@
 AEGIS turns AWS edge telemetry into structured, reviewable security findings while operating a production-style workload on Amazon EKS.
 
 [![Status-Page Secure CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/status-page-ci.yml/badge.svg?branch=main)](https://github.com/EthicalNayro/AEGIS/actions/workflows/status-page-ci.yml)
-[![AEGIS Python CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/aegis-ci.yml/badge.svg?branch=main)](https://github.com/EthicalNayro/AEGIS/actions/workflows/aegis-ci.yml)
 [![Terraform CI](https://github.com/EthicalNayro/AEGIS/actions/workflows/terraform-ci.yml/badge.svg?branch=main)](https://github.com/EthicalNayro/AEGIS/actions/workflows/terraform-ci.yml)
 ![AWS](https://img.shields.io/badge/AWS-EKS%20%7C%20WAF%20%7C%20Bedrock-FF9900?logo=amazonwebservices&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5?logo=kubernetes&logoColor=white)
@@ -59,29 +58,29 @@ The plugin lives under `status-page/statuspage/aegis_review/`; the upstream Stat
 
 ### Final platform architecture
 
-![AEGIS final platform architecture](docs/diagrams/20-aegis-final-platform.svg)
+![AEGIS final platform architecture](docs/diagrams/20-aegis-final-platform.png)
 
 The accepted topology separates the public edge, private EKS runtime, managed data services, security/AI services, GitOps control plane, and deliberate DNS automation boundary.
 
 ### Security signal → AI analysis → human decision
 
-![AEGIS security event and human governance architecture](docs/diagrams/21-aegis-security-human-decision.svg)
+![AEGIS security event and human governance architecture](docs/diagrams/21-aegis-security-human-decision.png)
 
 A blocked-request signal is routed through CloudWatch, EventBridge and SQS, enriched by the analyzer, classified by Bedrock, validated before persistence, and finalized only through protected staff review.
 
 ### Secure CI/CD & GitOps
 
-![AEGIS secure CI CD and GitOps architecture](docs/diagrams/22-aegis-secure-cicd-gitops.svg)
+![AEGIS secure CI CD and GitOps architecture](docs/diagrams/22-aegis-secure-cicd-gitops.png)
 
 CI validates and publishes an immutable artifact; Git declares the desired digest; Argo CD owns cluster reconciliation. The GitHub CI role has no direct EKS deployment permission.
 
 ### Multi-AZ resilience & observability
 
-![AEGIS multi-AZ resilience and observability architecture](docs/diagrams/23-aegis-resilience-observability.svg)
+![AEGIS multi-AZ resilience and observability architecture](docs/diagrams/23-aegis-resilience-observability.png)
 
 The application uses multiple Ready replicas across Availability Zones with probes, topology spread and disruption budgets. Karpenter provides recovery capacity, while Prometheus/Grafana and CloudWatch expose complementary operational signals.
 
-The editable architecture sources remain under [`docs/diagrams/`](docs/diagrams/), including focused Mermaid views for identity/trust and observability.
+The curated architecture set lives under [`docs/diagrams/`](docs/diagrams/) and contains only the four accepted, portfolio-facing views.
 
 ## Visual proof
 
@@ -172,13 +171,13 @@ See the [final acceptance proof](docs/final-acceptance.md), complete [validation
 ```text
 .
 ├── .github/workflows/             # CI and secure artifact delivery
-├── aegis/                         # tested CloudTrail security-processing core
 ├── gitops/eks-dev/                # authoritative application desired state
 ├── kubernetes/
+│   ├── aegis-analyzer/            # WAF/SQS/Bedrock/DynamoDB analyzer workload
 │   ├── argocd/                    # constrained GitOps applications/projects
-│   ├── observability/             # Prometheus, Grafana, AEGIS dashboards
-│   ├── platform/                  # cluster add-ons and platform resources
-│   └── security/                  # analyzer and security-pipeline workloads
+│   ├── base/                      # shared Kubernetes namespace and policies
+│   ├── karpenter/                 # recovery-capacity configuration
+│   └── observability/             # Prometheus, Grafana, AEGIS dashboards
 ├── scripts/                       # validation, review, and AI-quality tooling
 ├── status-page/                   # application source + isolated AEGIS plugin
 ├── terraform/
@@ -208,7 +207,7 @@ Strong portfolio claims are useful only when their limits are equally clear. AEG
 | Guide | Purpose |
 |---|---|
 | [Architecture](docs/architecture.md) | final topology, trust boundaries, runtime, and observability |
-| [Diagram set](docs/diagrams/README.md) | rendered portfolio architecture views plus editable source diagrams |
+| [Diagram set](docs/diagrams/README.md) | four authoritative portfolio architecture views |
 | [Networking](docs/networking.md) | current VPC, subnet, traffic, and DNS boundaries |
 | [Security](docs/security.md) | identity, secrets, WAF, AI safety, and supply-chain controls |
 | [Deployment](docs/deployment.md) | Terraform, CI, immutable delivery, Argo CD, and rollback |
@@ -218,7 +217,6 @@ Strong portfolio claims are useful only when their limits are equally clear. AEG
 | [Safety enhancements](docs/architecture-safety-enhancements.md) | failure modes and the controls that address them |
 | [Architecture decisions](docs/architecture-decisions.md) | implemented design choices and trade-offs |
 | [Disaster recovery](docs/disaster-recovery.md) | current recovery posture and unvalidated gaps |
-| [Project evolution](docs/phase-1-1-platform-modernization.md) | migration from the original EC2 design to the current EKS platform |
 
 ## Contributing and security
 

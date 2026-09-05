@@ -4,62 +4,7 @@ This directory contains incremental visual evidence captured while building AEGI
 
 The images are evidence of specific validation milestones; they are not intended to replace the architecture and validation documentation.
 
-## Phase 1 — Platform Foundation
-
-> Historical evidence only. The superseded EC2/Ansible implementation is available through Git history, not the active source tree.
-
-| # | Evidence |
-|---|---|
-| 01 | Local tooling prerequisites |
-| 02 | Terraform initialization |
-| 03 | Terraform network plan |
-| 04 | Terraform network apply |
-| 05 | Private subnet NAT egress |
-| 06 | Ansible connectivity across hosts |
-| 07 | PostgreSQL network configuration |
-| 08 | PostgreSQL database/user verification |
-| 09 | Redis Ansible deployment |
-| 10 | Redis listener verification |
-| 11 | Status Page Ansible installation |
-| 12 | Application systemd services |
-| 13 | Nginx HTTPS deployment |
-| 14 | Nginx → Gunicorn HTTPS chain |
-| 15 | Public Django port removal plan |
-| 16 | Private Django testing through SSH tunnel |
-| 17 | Final Terraform no-change state |
-| 18 | Final Ansible idempotency |
-| 19 | Production runtime verification |
-| 20 | Private backend connectivity |
-| 21 | Git secrets/state ignore verification |
-| 22 | Clean Git working tree |
-
-## Phase 2 — Security Event Pipeline
-
-| # | File | What it validates |
-|---|---|---|
-| 23 | `23-aegis-normalized-security-event.png` | Raw CloudTrail data normalized into the AEGIS event model |
-| 24 | `24-aegis-public-ssh-detection.png` | Public SSH exposure detection |
-| 25 | `25-aegis-detection-unit-tests.png` | Detection-rule unit tests |
-| 26 | `26-aegis-security-pipeline-unit-tests.png` | Security-pipeline tests |
-| 27 | `27-aegis-python-ci-success.png` | Initial Python CI success |
-| 28 | `28-aegis-end-to-end-security-incident.png` | Detection converted into a structured incident |
-| 29 | `29-aegis-postgresql-database-isolation.png` | Dedicated AEGIS database ownership/isolation |
-| 30 | `30-aegis-incident-persistence-deduplication.png` | First insert followed by idempotent duplicate handling |
-| 31 | `31-aegis-postgresql-persisted-incident.png` | Incident stored in PostgreSQL |
-| 32 | `32-aegis-persistence-ci-success.png` | Persistence milestone CI |
-| 33 | `33-aegis-cloudtrail-pagination-ci-success.png` | Paginated CloudTrail ingestion CI |
-| 35 | `35-aegis-continuous-security-worker.png` | Continuous worker processes events without manual invocation |
-| 36 | `36-aegis-worker-checkpoint-recovery.png` | Persistent checkpoint recovery after restart |
-| 37 | `37-tags-applying.png` | Explicit monitoring-tag setup used by the scope integration test |
-| 38 | `38-aegis-resource-scope-enforcement.png` | DENY/ALLOW resource-scope behavior |
-| 39 | `39-aegis-signal-oriented-observability-sanity.png` | Quiet normal polling plus visible worker health/liveness |
-| 39* | `39-aegis-resilient-security-worker-ci-success.mp4` | Recorded CI evidence for the resilient-worker milestone |
-| 40 | `40-aegis-phase2-final-ci-and-sync.png` | Phase 2 branch synchronization and green CI validation |
-| 41 | `41-aegis-pipeline-execution-telemetry.png` | Runtime telemetry across collection, normalization, scope, detection, and persistence |
-| 42 | `42-aegis-public-rdp-runtime-detection.png` | End-to-end runtime detection of Public RDP Exposure |
-| 43 | `43-aegis-public-rdp-persisted-incident.png` | SG-002 incident persisted once in PostgreSQL despite replay |
-
-## Phase 3 — EKS Security, Resilience, and Scaling
+## EKS Security, Resilience, and Scaling
 
 | # | File | What it validates |
 |---|---|---|
@@ -78,7 +23,7 @@ The images are evidence of specific validation milestones; they are not intended
 | 56a | [`56-karpenter-automatic-scale-down-consolidation1.png`](56-karpenter-automatic-scale-down-consolidation1.png) | Karpenter consolidation begins |
 | 56b | [`56-karpenter-automatic-scale-down-consolidation2.png`](56-karpenter-automatic-scale-down-consolidation2.png) | unused capacity is removed after consolidation |
 
-## Phase 4 — Public Edge and Security Telemetry
+## Public Edge and Security Telemetry
 
 | # | File | What it validates |
 |---|---|---|
@@ -97,7 +42,7 @@ The images are evidence of specific validation milestones; they are not intended
 | 69 | [`69-eventbridge-routes-cloudwatch-alarm-to-sqs.png`](69-eventbridge-routes-cloudwatch-alarm-to-sqs.png) | CloudWatch alarm event arrives in SQS |
 | 70 | [`70-sqs-security-events-dlq-redrive-policy.png`](70-sqs-security-events-dlq-redrive-policy.png) | SQS queue and DLQ redrive policy |
 
-## Phase 5 — Analyzer, AI, and Human Governance
+## Analyzer, AI, and Human Governance
 
 | # | File | What it validates |
 |---|---|---|
@@ -115,7 +60,7 @@ The images are evidence of specific validation milestones; they are not intended
 | 81b | [`81b-aegis-new-pending-review-finding.png`](81b-aegis-new-pending-review-finding.png) | new finding reaches the UI as `PENDING_REVIEW` |
 | 82 | [`82-aegis-public-https-human-review-platform.png`](82-aegis-public-https-human-review-platform.png) | public HTTPS application and protected review platform |
 
-## Phase 6 — GitOps, Delivery, and Observability
+## GitOps, Delivery, and Observability
 
 | # | File | What it validates |
 |---|---|---|
@@ -129,13 +74,11 @@ The images are evidence of specific validation milestones; they are not intended
 | 91 | [`91-aegis-grafana-kubernetes-observability.png`](91-aegis-grafana-kubernetes-observability.png) | Kubernetes observability for `aegis-system` |
 | 94 | [`94-aegis-security-command-center.png`](94-aegis-security-command-center.png) | final AEGIS analyst command center |
 
-Evidence numbers 34 and 84 were intentionally left unused. Captures 92 and 93 are referenced by the final validation convention but were not present in the supplied screenshot archive, so they are not represented as committed files.
-
-`39*` is a legacy duplicate sequence number retained to avoid rewriting historical binary evidence. New evidence should continue with the next unused number rather than renaming old files.
+Evidence number 84 was intentionally left unused. Captures 92 and 93 are referenced by the final validation convention but were not present in the supplied screenshot archive, so they are not represented as committed files.
 
 ## Evidence Guidelines
 
-- Do not capture credentials, Vault plaintext, database passwords, private keys, or account secrets.
+- Do not capture credentials, secret plaintext, database passwords, private keys, or account secrets.
 - Prefer screenshots that prove one clear milestone.
 - Keep architecture claims in Markdown documentation; use screenshots only as supporting evidence.
 - New evidence should use descriptive file names and continue with the next unused sequence number.
